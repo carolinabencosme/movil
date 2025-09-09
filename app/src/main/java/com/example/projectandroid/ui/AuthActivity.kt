@@ -11,6 +11,9 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
 class AuthActivity : AppCompatActivity() {
+
+    private val auth by lazy { Firebase.auth }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_auth)
@@ -19,13 +22,6 @@ class AuthActivity : AppCompatActivity() {
         val passwordField = findViewById<EditText>(R.id.editPassword)
         val loginButton = findViewById<Button>(R.id.buttonLogin)
         val registerButton = findViewById<Button>(R.id.buttonRegister)
-
-        val auth = Firebase.auth
-
-        fun openChat() {
-            startActivity(Intent(this, ChatActivity::class.java))
-            finish()
-        }
 
         loginButton.setOnClickListener {
             val email = emailField.text.toString().trim()
@@ -44,5 +40,17 @@ class AuthActivity : AppCompatActivity() {
                 .addOnSuccessListener { openChat() }
                 .addOnFailureListener { Toast.makeText(this, it.message, Toast.LENGTH_SHORT).show() }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (auth.currentUser != null) {
+            openChat()
+        }
+    }
+
+    private fun openChat() {
+        startActivity(Intent(this, ChatActivity::class.java))
+        finish()
     }
 }

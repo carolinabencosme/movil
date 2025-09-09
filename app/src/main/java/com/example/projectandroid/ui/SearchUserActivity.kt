@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.repository.UserRepository
+import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -49,7 +50,9 @@ class SearchUserActivity : AppCompatActivity() {
                 } else {
                     userRepository.getUsersByDisplayName(q, onSuccess = { users ->
                         adapter.submitList(users)
-                    }, onFailure = {})
+                    }, onFailure = { e ->
+                        ErrorLogger.log(this@SearchUserActivity, e)
+                    })
                 }
                 return true
             }

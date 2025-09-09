@@ -4,14 +4,15 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
 
 class ChatAdapter(
-    private val myUid: String,
-    private val items: MutableList<Message>
-) : RecyclerView.Adapter<ChatAdapter.MessageViewHolder>() {
+    private val myUid: String
+) : ListAdapter<Message, ChatAdapter.MessageViewHolder>(DIFF_CALLBACK) {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val messageText: TextView = view.findViewById(R.id.textMessage)
@@ -24,7 +25,7 @@ class ChatAdapter(
     }
 
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
-        val message = items[position]
+        val message = getItem(position)
         holder.messageText.text = message.text
         val background = if (message.senderId == myUid) {
             R.drawable.bg_bubble_me
@@ -34,16 +35,21 @@ class ChatAdapter(
         holder.messageText.setBackgroundResource(background)
     }
 
-    override fun getItemCount(): Int = items.size
-
-    fun submit(newList: List<Message>) {
-        items.clear()
-        items.addAll(newList)
-        notifyDataSetChanged()
+    fun addOne(message: Message) {
+        val newList = currentList.toMutableList()
+        newList.add(message)
+        submitList(newList)
     }
 
-    fun addOne(message: Message) {
-        items.add(message)
-        notifyItemInserted(items.size - 1)
+    companion object {
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<Message>() {
+            override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
+                return oldItem.createdAt == newItem.createdAt
+            }
+
+            override fun areContentsTheSame(oldItem: Message, newItem: Message): Boolean {
+                return oldItem == newItem
+            }
+        }
     }
 }

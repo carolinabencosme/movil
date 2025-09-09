@@ -21,6 +21,10 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ui.ChatListActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.SearchUserActivity"
             android:exported="true">
             <intent-filter>

@@ -28,33 +28,39 @@ class ChatActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
 
     val auth = Firebase.auth
-    if (auth.currentUser == null) {
+    val currentUser = auth.currentUser
+    if (currentUser == null) {
       startActivity(Intent(this, LoginActivity::class.java))
       finish()
       return
-    } else {
-      initChat()
     }
+
+    val recipientUid = intent.getStringExtra("recipientUid")
+    if (recipientUid.isNullOrBlank()) {
+      finish()
+      return
+    }
+
+    initChat(currentUser.uid, recipientUid)
   }
 
-  private fun initChat() {
+  private fun initChat(currentUid: String, recipientUid: String) {
     setContentView(R.layout.activity_chat)
 
     recyclerView = findViewById(R.id.recyclerView)
     messageInput = findViewById(R.id.editMessage)
     sendButton = findViewById(R.id.buttonSend)
 
-    val currentUser = Firebase.auth.currentUser!!
-
-    adapter = ChatAdapter(currentUser.uid)
+    adapter = ChatAdapter(currentUid)
     recyclerView.layoutManager = LinearLayoutManager(this).apply {
       stackFromEnd = true
     }
     recyclerView.adapter = adapter
 
+    val roomId = listOf(currentUid, recipientUid).sorted().joinToString("_")
     val ref = Firebase.firestore
       .collection("rooms")
-      .document("general")
+      .document(roomId)
       .collection("messages")
 
     listenerRegistration =
@@ -73,8 +79,8 @@ class ChatActivity : AppCompatActivity() {
       if (text.isEmpty()) return@setOnClickListener
 
       val data = mapOf(
-        "senderId" to currentUser.uid,
-        "senderName" to (currentUser.displayName ?: ""),
+        "senderId" to currentUid,
+        "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
       )

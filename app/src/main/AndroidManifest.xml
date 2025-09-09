@@ -17,8 +17,12 @@
 
         <activity
             android:name=".ui.ChatActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.SearchUserActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

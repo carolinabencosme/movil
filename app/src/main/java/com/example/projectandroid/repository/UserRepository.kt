@@ -7,8 +7,20 @@ import com.google.firebase.ktx.Firebase
 class UserRepository {
     private val usersCollection = Firebase.firestore.collection("users")
 
-    fun getUsersByDisplayName(displayName: String, onSuccess: (List<User>) -> Unit, onFailure: (Exception) -> Unit) {
-        usersCollection.whereEqualTo("displayName", displayName)
+    fun getUsersByDisplayName(
+        displayName: String,
+        onSuccess: (List<User>) -> Unit,
+        onFailure: (Exception) -> Unit
+    ) {
+        if (displayName.isBlank()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        usersCollection
+            .orderBy("displayName")
+            .startAt(displayName)
+            .endAt(displayName + '\uf8ff')
             .get()
             .addOnSuccessListener { result ->
                 val users = result.documents.mapNotNull { it.toObject(User::class.java) }

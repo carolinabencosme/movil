@@ -36,16 +36,19 @@ class ChatActivity : AppCompatActivity() {
     }
 
     val recipientUid = intent.getStringExtra("recipientUid")
-    if (recipientUid.isNullOrBlank()) {
+    val recipientName = intent.getStringExtra("recipientName")
+    if (recipientUid.isNullOrBlank() || recipientName.isNullOrBlank()) {
       finish()
       return
     }
 
-    initChat(currentUser.uid, recipientUid)
+    initChat(currentUser.uid, recipientUid, recipientName)
   }
 
-  private fun initChat(currentUid: String, recipientUid: String) {
+  private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {
     setContentView(R.layout.activity_chat)
+
+    supportActionBar?.title = recipientName
 
     recyclerView = findViewById(R.id.recyclerView)
     messageInput = findViewById(R.id.editMessage)

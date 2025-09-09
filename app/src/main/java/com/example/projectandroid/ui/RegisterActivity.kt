@@ -4,10 +4,12 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.util.Patterns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
+import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
@@ -27,14 +29,28 @@ class RegisterActivity : AppCompatActivity() {
       val name = nameInput.text.toString().trim()
       val email = emailInput.text.toString().trim()
       val password = passwordInput.text.toString().trim()
-      if (name.isEmpty() || email.isEmpty() || password.isEmpty()) return@setOnClickListener
+
+      var isValid = true
+      if (name.isBlank()) {
+        nameInput.error = getString(R.string.required_field)
+        isValid = false
+      }
+      if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        emailInput.error = getString(R.string.invalid_email)
+        isValid = false
+      }
+      if (password.length < 6) {
+        passwordInput.error = getString(R.string.invalid_password)
+        isValid = false
+      }
+      if (!isValid) return@setOnClickListener
 
       Firebase.auth.createUserWithEmailAndPassword(email, password)
         .addOnSuccessListener { result ->
           val user = result.user ?: return@addOnSuccessListener
           // Update the FirebaseAuth profile with the provided display name
           val profileUpdates = userProfileChangeRequest { displayName = name }
-          user.updateProfile(profileUpdates)
+          user.updateProfile(profileUpdates).addOnFailureListener { e -> ErrorLogger.log(this, e) }
 
           val profile = User(
             uid = user.uid,
@@ -48,11 +64,13 @@ class RegisterActivity : AppCompatActivity() {
               finish()
             }
             .addOnFailureListener { e ->
-              Toast.makeText(this, e.localizedMessage ?: "Error", Toast.LENGTH_LONG).show()
+              ErrorLogger.log(this, e)
+              Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
             }
         }
         .addOnFailureListener { e ->
-          Toast.makeText(this, e.localizedMessage ?: "Error", Toast.LENGTH_LONG).show()
+          ErrorLogger.log(this, e)
+          Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
         }
     }
   }

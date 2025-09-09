@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">projectAndroid</string>
+    <string name="invalid_email">Email inválido</string>
+    <string name="invalid_password">La contraseña debe tener al menos 6 caracteres</string>
+    <string name="error_generic">Error</string>
+    <string name="required_field">Campo requerido</string>
 </resources>

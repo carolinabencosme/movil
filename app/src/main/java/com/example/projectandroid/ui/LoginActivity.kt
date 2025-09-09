@@ -4,9 +4,11 @@ import android.content.Intent
 import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
+import android.util.Patterns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
+import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -23,7 +25,17 @@ class LoginActivity : AppCompatActivity() {
     loginButton.setOnClickListener {
       val email = emailInput.text.toString().trim()
       val password = passwordInput.text.toString().trim()
-      if (email.isEmpty() || password.isEmpty()) return@setOnClickListener
+
+      var isValid = true
+      if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        emailInput.error = getString(R.string.invalid_email)
+        isValid = false
+      }
+      if (password.length < 6) {
+        passwordInput.error = getString(R.string.invalid_password)
+        isValid = false
+      }
+      if (!isValid) return@setOnClickListener
 
       Firebase.auth.signInWithEmailAndPassword(email, password)
         .addOnSuccessListener {
@@ -31,7 +43,8 @@ class LoginActivity : AppCompatActivity() {
           finish()
         }
         .addOnFailureListener { e ->
-          Toast.makeText(this, e.localizedMessage ?: "Error", Toast.LENGTH_LONG).show()
+          ErrorLogger.log(this, e)
+          Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
         }
     }
 

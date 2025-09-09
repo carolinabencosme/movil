@@ -3,6 +3,7 @@ package com.example.projectandroid.ui
 import android.os.Bundle
 import android.view.View
 import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -25,9 +26,16 @@ class ChatActivity : AppCompatActivity() {
 
     val auth = Firebase.auth
     if (auth.currentUser == null) {
-      auth.signInAnonymously().addOnSuccessListener {
-        initChat()
-      }
+      auth
+        .signInAnonymously()
+        .addOnSuccessListener { initChat() }
+        .addOnFailureListener { e ->
+          Toast.makeText(
+            this,
+            "No se pudo iniciar sesión: ${e.localizedMessage ?: "Revisa tu conexión"}. Inténtalo nuevamente",
+            Toast.LENGTH_LONG,
+          ).show()
+        }
     } else {
       initChat()
     }

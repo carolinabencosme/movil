@@ -1,7 +1,8 @@
 /.gradle/
 /build/
 app/build/
-local.properties
+# Ignore local SDK configuration
+/local.properties
 /.idea/
 *.iml
 *.apk

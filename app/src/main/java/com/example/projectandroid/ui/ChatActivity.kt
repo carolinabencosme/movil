@@ -11,6 +11,7 @@ import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -20,6 +21,7 @@ class ChatActivity : AppCompatActivity() {
   private lateinit var adapter: ChatAdapter
   private lateinit var messageInput: EditText
   private lateinit var sendButton: View
+  private lateinit var listenerRegistration: ListenerRegistration
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -61,11 +63,12 @@ class ChatActivity : AppCompatActivity() {
       .document("general")
       .collection("messages")
 
-    ref.orderBy("createdAt").addSnapshotListener { value, _ ->
-      val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
-      adapter.submit(messages)
-      recyclerView.scrollToPosition(adapter.itemCount - 1)
-    }
+    listenerRegistration =
+      ref.orderBy("createdAt").addSnapshotListener { value, _ ->
+        val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
+        adapter.submit(messages)
+        recyclerView.scrollToPosition(adapter.itemCount - 1)
+      }
 
     sendButton.setOnClickListener {
       val text = messageInput.text.toString().trim()
@@ -80,5 +83,12 @@ class ChatActivity : AppCompatActivity() {
       ref.add(data)
       messageInput.text.clear()
     }
+  }
+
+  override fun onDestroy() {
+    if (::listenerRegistration.isInitialized) {
+      listenerRegistration.remove()
+    }
+    super.onDestroy()
   }
 }

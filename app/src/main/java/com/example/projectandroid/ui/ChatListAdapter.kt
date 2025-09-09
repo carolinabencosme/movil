@@ -9,8 +9,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.ChatRoom
-import java.text.SimpleDateFormat
-import java.util.Locale
 
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
@@ -19,21 +17,21 @@ class ChatListAdapter(
     class ChatRoomViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.textName)
         val lastMessageText: TextView = view.findViewById(R.id.textLastMessage)
-        val timeText: TextView = view.findViewById(R.id.textTime)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_chat_room, parent, false)
+            .inflate(R.layout.item_user, parent, false)
         return ChatRoomViewHolder(view)
     }
 
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val room = getItem(position)
         holder.nameText.text = room.contactName
-        holder.lastMessageText.text = room.lastMessage
-        val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
-        holder.timeText.text = timeFormat.format(room.updatedAt.toDate())
+        holder.lastMessageText.apply {
+            text = room.lastMessage
+            visibility = View.VISIBLE
+        }
         holder.itemView.setOnClickListener { onClick(room) }
     }
 

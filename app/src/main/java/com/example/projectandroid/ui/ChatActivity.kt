@@ -7,6 +7,7 @@ import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.appbar.MaterialToolbar
 import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
 import com.google.firebase.auth.ktx.auth
@@ -48,6 +49,9 @@ class ChatActivity : AppCompatActivity() {
   private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {
     setContentView(R.layout.activity_chat)
 
+    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+    setSupportActionBar(toolbar)
+    supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = recipientName
 
     recyclerView = findViewById(R.id.recyclerView)
@@ -97,5 +101,10 @@ class ChatActivity : AppCompatActivity() {
       listenerRegistration.remove()
     }
     super.onDestroy()
+  }
+
+  override fun onSupportNavigateUp(): Boolean {
+    finish()
+    return true
   }
 }

@@ -28,8 +28,10 @@ class SearchUserActivity : AppCompatActivity() {
         setContentView(R.layout.activity_search_user)
 
         adapter = UserAdapter { user ->
-            val intent = Intent(this, ChatActivity::class.java)
-            intent.putExtra("recipientUid", user.uid)
+            val intent = Intent(this, ChatActivity::class.java).apply {
+                putExtra("recipientUid", user.uid)
+                putExtra("recipientName", user.displayName)
+            }
             startActivity(intent)
         }
 

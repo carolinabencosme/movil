@@ -2,6 +2,8 @@ package com.example.projectandroid.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.Menu
+import android.view.MenuItem
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -9,10 +11,12 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.ChatRoom
 import com.example.projectandroid.util.ErrorLogger
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.android.material.appbar.MaterialToolbar
 import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {
@@ -33,6 +37,8 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_chat_list)
+        val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+        setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
             val intent = Intent(this, ChatActivity::class.java).apply {
@@ -82,6 +88,25 @@ class ChatListActivity : AppCompatActivity() {
                 allRooms = list
                 filterRooms(searchView.query.toString())
             }
+    }
+
+    override fun onCreateOptionsMenu(menu: Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_chat_list, menu)
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        return when (item.itemId) {
+            R.id.action_logout -> {
+                FirebaseAuth.getInstance().signOut()
+                val intent = Intent(this, LoginActivity::class.java)
+                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                startActivity(intent)
+                finish()
+                true
+            }
+            else -> super.onOptionsItemSelected(item)
+        }
     }
 
     private fun filterRooms(query: String) {

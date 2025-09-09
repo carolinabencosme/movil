@@ -7,7 +7,9 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
+import com.example.projectandroid.model.User
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -29,12 +31,18 @@ class RegisterActivity : AppCompatActivity() {
 
       Firebase.auth.createUserWithEmailAndPassword(email, password)
         .addOnSuccessListener { result ->
-          val uid = result.user?.uid ?: return@addOnSuccessListener
-          val data = mapOf(
-            "name" to name,
-            "uid" to uid,
+          val user = result.user ?: return@addOnSuccessListener
+          // Update the FirebaseAuth profile with the provided display name
+          val profileUpdates = userProfileChangeRequest { displayName = name }
+          user.updateProfile(profileUpdates)
+
+          val profile = User(
+            uid = user.uid,
+            displayName = name,
+            photoUrl = user.photoUrl?.toString(),
           )
-          Firebase.firestore.collection("users").document(uid).set(data)
+
+          Firebase.firestore.collection("users").document(user.uid).set(profile)
             .addOnSuccessListener {
               startActivity(Intent(this, ChatActivity::class.java))
               finish()

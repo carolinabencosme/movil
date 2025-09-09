@@ -52,7 +52,7 @@ class ChatActivity : AppCompatActivity() {
 
     val currentUser = Firebase.auth.currentUser!!
 
-    adapter = ChatAdapter(currentUser.uid, mutableListOf())
+    adapter = ChatAdapter(currentUser.uid)
     recyclerView.layoutManager = LinearLayoutManager(this).apply {
       stackFromEnd = true
     }
@@ -66,7 +66,7 @@ class ChatActivity : AppCompatActivity() {
     listenerRegistration =
       ref.orderBy("createdAt").addSnapshotListener { value, _ ->
         val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
-        adapter.submit(messages)
+        adapter.submitList(messages)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
       }
 

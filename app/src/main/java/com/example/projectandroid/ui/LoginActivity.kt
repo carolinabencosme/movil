@@ -39,7 +39,7 @@ class LoginActivity : AppCompatActivity() {
 
       Firebase.auth.signInWithEmailAndPassword(email, password)
         .addOnSuccessListener {
-          startActivity(Intent(this, SearchUserActivity::class.java))
+          startActivity(Intent(this, ChatListActivity::class.java))
           finish()
         }
         .addOnFailureListener { e ->

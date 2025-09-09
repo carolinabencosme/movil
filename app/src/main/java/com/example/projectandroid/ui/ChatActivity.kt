@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.example.projectandroid.util.ErrorLogger
 
 class ChatActivity : AppCompatActivity() {
 
@@ -64,7 +65,11 @@ class ChatActivity : AppCompatActivity() {
       .collection("messages")
 
     listenerRegistration =
-      ref.orderBy("createdAt").addSnapshotListener { value, _ ->
+      ref.orderBy("createdAt").addSnapshotListener { value, error ->
+        if (error != null) {
+          ErrorLogger.log(this, error)
+          return@addSnapshotListener
+        }
         val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
         adapter.submitList(messages)
         recyclerView.scrollToPosition(adapter.itemCount - 1)
@@ -80,7 +85,7 @@ class ChatActivity : AppCompatActivity() {
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
       )
-      ref.add(data)
+      ref.add(data).addOnFailureListener { e -> ErrorLogger.log(this, e) }
       messageInput.text.clear()
     }
   }

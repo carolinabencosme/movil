@@ -44,7 +44,7 @@ class RegisterActivity : AppCompatActivity() {
 
           Firebase.firestore.collection("users").document(user.uid).set(profile)
             .addOnSuccessListener {
-              startActivity(Intent(this, ChatActivity::class.java))
+              startActivity(Intent(this, SearchUserActivity::class.java))
               finish()
             }
             .addOnFailureListener { e ->

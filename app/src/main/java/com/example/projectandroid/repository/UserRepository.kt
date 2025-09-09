@@ -1,11 +1,17 @@
 package com.example.projectandroid.repository
 
 import com.example.projectandroid.model.User
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
-class UserRepository {
-    private val usersCollection = Firebase.firestore.collection("users")
+/**
+ * Repository that encapsulates user related Firestore queries.
+ *
+ * @param firestore allows dependency injection for testing.
+ */
+class UserRepository(private val firestore: FirebaseFirestore = Firebase.firestore) {
+    private val usersCollection = firestore.collection("users")
 
     fun getUsersByDisplayName(
         displayName: String,

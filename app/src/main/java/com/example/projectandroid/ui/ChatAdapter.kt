@@ -1,22 +1,30 @@
 package com.example.projectandroid.ui
 
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 class ChatAdapter(
-    private val myUid: String
+    private val myUid: String,
 ) : ListAdapter<Message, ChatAdapter.MessageViewHolder>(DIFF_CALLBACK) {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val root: LinearLayout = view.findViewById(R.id.messageRoot)
         val messageText: TextView = view.findViewById(R.id.textMessage)
+        val timeText: TextView = view.findViewById(R.id.textTime)
     }
+
+    private val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -27,12 +35,15 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
         holder.messageText.text = message.text
-        val background = if (message.senderId == myUid) {
-            R.drawable.bg_bubble_me
+        holder.timeText.text = timeFormatter.format(message.createdAt.toDate())
+
+        if (message.senderId == myUid) {
+            holder.root.gravity = Gravity.END
+            holder.messageText.setBackgroundResource(R.drawable.bg_bubble_me)
         } else {
-            R.drawable.bg_bubble_other
+            holder.root.gravity = Gravity.START
+            holder.messageText.setBackgroundResource(R.drawable.bg_bubble_other)
         }
-        holder.messageText.setBackgroundResource(background)
     }
 
     fun addOne(message: Message) {

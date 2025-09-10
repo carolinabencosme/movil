@@ -78,7 +78,7 @@ class ChatActivity : AppCompatActivity() {
         }
         val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
         adapter.submitList(messages)
-        recyclerView.scrollToPosition(adapter.itemCount - 1)
+        if (adapter.itemCount > 0) recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
       }
 
     sendButton.setOnClickListener {

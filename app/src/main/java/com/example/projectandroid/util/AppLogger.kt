@@ -9,6 +9,8 @@ import java.util.Locale
 
 object AppLogger {
     private const val TAG = "AppLogger"
+    private const val MAX_LOG_FILES = 20
+    private const val MAX_LOG_STORAGE_BYTES = 20L * 1024 * 1024 // 20 MB
 
     fun logError(context: Context, throwable: Throwable) {
         try {
@@ -17,6 +19,14 @@ object AppLogger {
             val file = File(logsDir, "$timestamp.log")
             file.printWriter().use { pw ->
                 throwable.printStackTrace(pw)
+            }
+            val logFiles = logsDir.listFiles { f -> f.extension == "log" }?.sortedBy { it.lastModified() }?.toMutableList() ?: mutableListOf()
+            Log.i(TAG, "Existing logs: ${logFiles.joinToString { it.name }}")
+            var totalSize = logFiles.sumOf { it.length() }
+            while (logFiles.size > MAX_LOG_FILES || totalSize > MAX_LOG_STORAGE_BYTES) {
+                val oldest = logFiles.removeAt(0)
+                totalSize -= oldest.length()
+                oldest.delete()
             }
         } catch (_: Exception) {
             // Ignore logging failures

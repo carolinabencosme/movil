@@ -8,7 +8,7 @@ import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
-import com.example.projectandroid.util.ErrorLogger
+import com.example.projectandroid.util.AppLogger
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.FirebaseNetworkException
@@ -56,7 +56,7 @@ class LoginActivity : AppCompatActivity() {
           finish()
         }
         .addOnFailureListener { e ->
-          ErrorLogger.log(this, e)
+          AppLogger.logError(this, e)
           val message = when (e) {
             is FirebaseAuthInvalidUserException -> getString(R.string.error_invalid_user)
             is FirebaseAuthInvalidCredentialsException -> getString(R.string.error_invalid_credentials)

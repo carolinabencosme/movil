@@ -15,7 +15,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.ChatRoom
-import com.example.projectandroid.util.ErrorLogger
+import com.example.projectandroid.util.AppLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -83,7 +83,7 @@ class ChatListActivity : AppCompatActivity() {
             }
         }
         viewModel.error.observe(this) { e ->
-            e?.let { ErrorLogger.log(this, it) }
+            e?.let { AppLogger.logError(this, it) }
         }
         viewModel.startListening(currentUser.uid)
     }

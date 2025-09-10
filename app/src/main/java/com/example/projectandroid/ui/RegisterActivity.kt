@@ -7,7 +7,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
-import com.example.projectandroid.util.ErrorLogger
+import com.example.projectandroid.util.AppLogger
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.ktx.auth
@@ -50,7 +50,7 @@ class RegisterActivity : AppCompatActivity() {
           val user = result.user ?: return@addOnSuccessListener
           // Update the FirebaseAuth profile with the provided display name
           val profileUpdates = userProfileChangeRequest { displayName = name }
-          user.updateProfile(profileUpdates).addOnFailureListener { e -> ErrorLogger.log(this, e) }
+          user.updateProfile(profileUpdates).addOnFailureListener { e -> AppLogger.logError(this, e) }
 
           val profile = User(
             uid = user.uid,
@@ -64,12 +64,12 @@ class RegisterActivity : AppCompatActivity() {
               finish()
             }
             .addOnFailureListener { e ->
-              ErrorLogger.log(this, e)
+              AppLogger.logError(this, e)
               Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
             }
         }
         .addOnFailureListener { e ->
-          ErrorLogger.log(this, e)
+          AppLogger.logError(this, e)
           Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
         }
     }

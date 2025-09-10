@@ -2,6 +2,7 @@ package com.example.projectandroid.ui
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -64,6 +65,7 @@ class ChatActivity : AppCompatActivity() {
     }
     recyclerView.adapter = adapter
 
+
     val roomId = listOf(currentUid, recipientUid).sorted().joinToString("_")
     val ref = Firebase.firestore
       .collection("rooms")
@@ -92,6 +94,22 @@ class ChatActivity : AppCompatActivity() {
         "createdAt" to FieldValue.serverTimestamp(),
       )
       ref.add(data).addOnFailureListener { e -> AppLogger.logError(this, e) }
+      ref.add(data).addOnFailureListener { e -> ErrorLogger.log(this, e) }
+
+      //nuevo
+
+      val roomData = mapOf(
+        "participantIds" to listOf(currentUid, recipientUid),
+        "userNames" to mapOf(
+          currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+          recipientUid to recipientName
+        ),
+        "lastMessage" to text,
+        "updatedAt" to FieldValue.serverTimestamp()
+      )
+      Firebase.firestore.collection("rooms").document(roomId)
+        .set(roomData, com.google.firebase.firestore.SetOptions.merge())
+
       messageInput.text?.clear()
     }
   }

@@ -4,6 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -14,17 +18,15 @@ import com.example.projectandroid.model.ChatRoom
 import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.android.material.appbar.MaterialToolbar
 import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {
+    private val viewModel: ChatListViewModel by viewModels()
     private lateinit var adapter: ChatListAdapter
     private lateinit var searchView: SearchView
     private var allRooms: List<ChatRoom> = emptyList()
-    private lateinit var listenerRegistration: ListenerRegistration
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +52,9 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         val recycler = findViewById<RecyclerView>(R.id.recyclerChats)
+        val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+        val placeholder = findViewById<TextView>(R.id.textPlaceholder)
+
         recycler.layoutManager = LinearLayoutManager(this)
         recycler.adapter = adapter
         recycler.addItemDecoration(DividerItemDecoration(this, DividerItemDecoration.VERTICAL))
@@ -63,33 +68,24 @@ class ChatListActivity : AppCompatActivity() {
             }
         })
 
-        listenerRegistration = Firebase.firestore
-            .collection("rooms")
-            .whereArrayContains("participantIds", currentUser.uid)
-            .addSnapshotListener { value, error ->
-                if (error != null) {
-                    ErrorLogger.log(this, error)
-                    return@addSnapshotListener
-                }
-                val list = value?.documents?.mapNotNull { doc ->
-                    val participantIds = doc.get("participantIds") as? List<*>
-                    val otherUid = participantIds?.firstOrNull { it != currentUser.uid } as? String
-                    val userNames = doc.get("userNames") as? Map<*, *>
-                    val contactName = userNames?.get(otherUid) as? String ?: ""
-                    val lastMessage = doc.getString("lastMessage") ?: ""
-                    val updatedAt = doc.getTimestamp("updatedAt")
-                        ?: com.google.firebase.Timestamp.now()
-                    if (otherUid == null) null else ChatRoom(
-                        id = doc.id,
-                        contactUid = otherUid,
-                        contactName = contactName,
-                        lastMessage = lastMessage,
-                        updatedAt = updatedAt,
-                    )
-                } ?: emptyList()
-                allRooms = list
+        viewModel.loading.observe(this) { isLoading ->
+            progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+        viewModel.rooms.observe(this) { list ->
+            allRooms = list
+            if (list.isEmpty()) {
+                placeholder.visibility = View.VISIBLE
+                recycler.visibility = View.GONE
+            } else {
+                placeholder.visibility = View.GONE
+                recycler.visibility = View.VISIBLE
                 filterRooms(searchView.query.toString())
             }
+        }
+        viewModel.error.observe(this) { e ->
+            e?.let { ErrorLogger.log(this, it) }
+        }
+        viewModel.startListening(currentUser.uid)
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -118,12 +114,5 @@ class ChatListActivity : AppCompatActivity() {
             val lower = query.lowercase(Locale.getDefault())
             adapter.submitList(allRooms.filter { it.contactName.lowercase(Locale.getDefault()).contains(lower) })
         }
-    }
-
-    override fun onDestroy() {
-        if (::listenerRegistration.isInitialized) {
-            listenerRegistration.remove()
-        }
-        super.onDestroy()
     }
 }

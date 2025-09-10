@@ -6,4 +6,9 @@
         android:title="@string/logout"
         android:icon="@drawable/ic_logout"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_share_logs"
+        android:title="@string/share_logs"
+        android:icon="@android:drawable/ic_menu_share"
+        app:showAsAction="ifRoom" />
 </menu>

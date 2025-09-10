@@ -103,6 +103,10 @@ class ChatListActivity : AppCompatActivity() {
                 finish()
                 true
             }
+            R.id.action_share_logs -> {
+                AppLogger.shareLogs(this)
+                true
+            }
             else -> super.onOptionsItemSelected(item)
         }
     }

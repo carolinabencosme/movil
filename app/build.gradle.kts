@@ -49,4 +49,13 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+
+
+    // ViewModel + livedata (AndroidX Lifecycle)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.6") // si usas LiveData
+
+    // Delegado `by viewModels()` para Activities/Fragments
+    implementation("androidx.activity:activity-ktx:1.9.2")   // para Activities
+    implementation("androidx.fragment:fragment-ktx:1.8.3")   // para Fragments (si lo usas)
 }

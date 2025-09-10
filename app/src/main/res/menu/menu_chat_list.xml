@@ -4,6 +4,6 @@
     <item
         android:id="@+id/action_logout"
         android:title="@string/logout"
-        android:icon="@android:drawable/ic_lock_power_off"
+        android:icon="@drawable/ic_logout"
         app:showAsAction="ifRoom" />
 </menu>

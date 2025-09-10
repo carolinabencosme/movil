@@ -2,12 +2,12 @@ package com.example.projectandroid.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.widget.EditText
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
+import com.google.android.material.textfield.TextInputEditText
 import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
 import com.google.firebase.auth.ktx.auth
@@ -21,8 +21,8 @@ class ChatActivity : AppCompatActivity() {
 
   private lateinit var recyclerView: RecyclerView
   private lateinit var adapter: ChatAdapter
-  private lateinit var messageInput: EditText
-  private lateinit var sendButton: View
+  private lateinit var messageInput: TextInputEditText
+  private lateinit var sendButton: MaterialButton
   private lateinit var listenerRegistration: ListenerRegistration
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -92,7 +92,7 @@ class ChatActivity : AppCompatActivity() {
         "createdAt" to FieldValue.serverTimestamp(),
       )
       ref.add(data).addOnFailureListener { e -> ErrorLogger.log(this, e) }
-      messageInput.text.clear()
+      messageInput.text?.clear()
     }
   }
 

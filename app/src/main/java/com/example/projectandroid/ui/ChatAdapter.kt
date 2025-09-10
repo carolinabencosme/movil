@@ -35,7 +35,16 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
         holder.messageText.text = message.text
-        holder.timeText.text = timeFormatter.format(message.createdAt.toDate())
+        //holder.timeText.text = timeFormatter.format(message.createdAt.toDate())
+        // nuevo
+        val ts = message.createdAt
+        if (ts != null) {
+            holder.timeText.text = timeFormatter.format(ts.toDate())
+            holder.timeText.visibility = View.VISIBLE
+        } else {
+            holder.timeText.text = ""
+            holder.timeText.visibility = View.INVISIBLE
+        }
 
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END

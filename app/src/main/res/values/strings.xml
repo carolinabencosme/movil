@@ -10,4 +10,5 @@
     <string name="error_invalid_credentials">Credenciales incorrectas</string>
     <string name="error_network">Error de red</string>
     <string name="no_chats_placeholder">No tienes chats aún</string>
+    <string name="share_logs">Compartir logs</string>
 </resources>

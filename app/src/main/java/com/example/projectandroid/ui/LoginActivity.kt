@@ -3,12 +3,17 @@ package com.example.projectandroid.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
+import android.view.View
+import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.util.ErrorLogger
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
+import com.google.firebase.FirebaseNetworkException
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -21,6 +26,7 @@ class LoginActivity : AppCompatActivity() {
     val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
     val loginButton = findViewById<MaterialButton>(R.id.buttonLogin)
     val registerButton = findViewById<MaterialButton>(R.id.buttonRegister)
+    val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
     loginButton.setOnClickListener {
       val email = emailInput.text.toString().trim()
@@ -37,14 +43,27 @@ class LoginActivity : AppCompatActivity() {
       }
       if (!isValid) return@setOnClickListener
 
+      progressBar.visibility = View.VISIBLE
+      loginButton.isEnabled = false
+
       Firebase.auth.signInWithEmailAndPassword(email, password)
+        .addOnCompleteListener {
+          progressBar.visibility = View.GONE
+          loginButton.isEnabled = true
+        }
         .addOnSuccessListener {
           startActivity(Intent(this, ChatListActivity::class.java))
           finish()
         }
         .addOnFailureListener { e ->
           ErrorLogger.log(this, e)
-          Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
+          val message = when (e) {
+            is FirebaseAuthInvalidUserException -> getString(R.string.error_invalid_user)
+            is FirebaseAuthInvalidCredentialsException -> getString(R.string.error_invalid_credentials)
+            is FirebaseNetworkException -> getString(R.string.error_network)
+            else -> getString(R.string.error_generic)
+          }
+          Toast.makeText(this, message, Toast.LENGTH_LONG).show()
         }
     }
 

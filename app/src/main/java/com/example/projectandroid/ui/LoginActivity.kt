@@ -52,7 +52,7 @@ class LoginActivity : AppCompatActivity() {
           loginButton.isEnabled = true
         }
         .addOnSuccessListener {
-          startActivity(Intent(this, ChatListActivity::class.java))
+          startActivity(Intent(this, SearchUserActivity::class.java))
           finish()
         }
         .addOnFailureListener { e ->

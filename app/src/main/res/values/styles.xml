@@ -5,7 +5,7 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:hintTextColor">@color/md_theme_light_secondary</item>
+        <item name="android:textColorHint">@color/md_theme_light_secondary</item>
     </style>
 
     <style name="AppTextInputEditText" parent="Widget.MaterialComponents.TextInputEditText">

@@ -23,7 +23,7 @@ class LoginActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
 
     if (Firebase.auth.currentUser != null) {
-      startActivity(Intent(this, ChatListActivity::class.java))
+      startActivity(Intent(this, MainActivity::class.java))
       finish()
       return
     }
@@ -64,7 +64,7 @@ class LoginActivity : AppCompatActivity() {
           loginButton.isEnabled = true
         }
         .addOnSuccessListener {
-          startActivity(Intent(this, ChatListActivity::class.java))
+          startActivity(Intent(this, MainActivity::class.java))
           finish()
         }
         .addOnFailureListener { e ->

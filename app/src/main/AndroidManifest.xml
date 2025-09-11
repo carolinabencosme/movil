@@ -22,12 +22,8 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".ui.ChatListActivity"
+            android:name=".ui.MainActivity"
             android:exported="true" />
-
-        <activity
-            android:name=".ui.SearchUserActivity"
-            android:exported="false" />
 
         <activity
             android:name=".ui.LoginActivity"

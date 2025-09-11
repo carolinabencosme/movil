@@ -19,7 +19,7 @@ import com.example.projectandroid.util.AppLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import com.google.android.material.appbar.MaterialToolbar
+import androidx.appcompat.widget.Toolbar
 import java.util.Locale
 
 class ChatListActivity : AppCompatActivity() {
@@ -40,7 +40,7 @@ class ChatListActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_chat_list)
-        val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+        val toolbar = findViewById<Toolbar>(R.id.topAppBar)
         setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->

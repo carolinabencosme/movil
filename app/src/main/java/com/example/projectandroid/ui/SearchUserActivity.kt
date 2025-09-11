@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.repository.UserRepository
 import com.example.projectandroid.util.AppLogger
-import com.google.android.material.appbar.MaterialToolbar
+import androidx.appcompat.widget.Toolbar
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -29,7 +29,7 @@ class SearchUserActivity : AppCompatActivity() {
 
         setContentView(R.layout.activity_search_user)
 
-        val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+        val toolbar = findViewById<Toolbar>(R.id.topAppBar)
         setSupportActionBar(toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

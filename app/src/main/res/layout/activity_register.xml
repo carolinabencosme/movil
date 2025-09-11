@@ -6,48 +6,36 @@
     android:orientation="vertical"
     android:padding="16dp">
 
-    <com.google.android.material.appbar.MaterialToolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/topAppBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
-        android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
         app:title="@string/register_title" />
 
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/AppTextInputLayout"
-        android:hint="Name"
-        app:startIconDrawable="@drawable/ic_person">
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/editName"
+        style="@style/AppEditText"
+        android:drawableStart="@drawable/ic_person"
+        android:hint="Name" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editName"
-            style="@style/AppTextInputEditText" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/AppTextInputLayout"
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/editEmail"
+        style="@style/AppEditText"
+        android:drawableStart="@drawable/ic_email"
         android:hint="Email"
-        app:startIconDrawable="@drawable/ic_email">
+        android:inputType="textEmailAddress" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editEmail"
-            style="@style/AppTextInputEditText"
-            android:inputType="textEmailAddress" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        style="@style/AppTextInputLayout"
+    <androidx.appcompat.widget.AppCompatEditText
+        android:id="@+id/editPassword"
+        style="@style/AppEditText"
+        android:drawableStart="@drawable/ic_lock"
         android:hint="Password"
-        app:startIconDrawable="@drawable/ic_lock">
+        android:inputType="textPassword" />
 
-        <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/editPassword"
-            style="@style/AppTextInputEditText"
-            android:inputType="textPassword" />
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.button.MaterialButton
+    <androidx.appcompat.widget.AppCompatButton
         android:id="@+id/buttonRegister"
-        style="@style/AppMaterialButton"
+        style="@style/AppButton"
         android:text="Register" />
 </LinearLayout>

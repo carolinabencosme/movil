@@ -8,9 +8,9 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
 import com.example.projectandroid.util.AppLogger
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import androidx.appcompat.widget.Toolbar
+import android.widget.Button
+import android.widget.EditText
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
@@ -21,14 +21,14 @@ class RegisterActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_register)
 
-    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+    val toolbar = findViewById<Toolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-    val nameInput = findViewById<TextInputEditText>(R.id.editName)
-    val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
-    val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
-    val registerButton = findViewById<MaterialButton>(R.id.buttonRegister)
+    val nameInput = findViewById<EditText>(R.id.editName)
+    val emailInput = findViewById<EditText>(R.id.editEmail)
+    val passwordInput = findViewById<EditText>(R.id.editPassword)
+    val registerButton = findViewById<Button>(R.id.buttonRegister)
 
     registerButton.setOnClickListener {
       val name = nameInput.text.toString().trim()

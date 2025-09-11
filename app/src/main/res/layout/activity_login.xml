@@ -14,41 +14,35 @@
         android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
 
     <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/AppTextInputLayout"
         android:hint="Email"
         app:startIconDrawable="@drawable/ic_email">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editEmail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/AppTextInputEditText"
             android:inputType="textEmailAddress" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/AppTextInputLayout"
         android:hint="Password"
         app:startIconDrawable="@drawable/ic_lock">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/editPassword"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/AppTextInputEditText"
             android:inputType="textPassword" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonLogin"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/AppMaterialButton"
         android:text="Login" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/buttonRegister"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        style="@style/AppMaterialButton"
         android:text="Register" />
 
     <ProgressBar

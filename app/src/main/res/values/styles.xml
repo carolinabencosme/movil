@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="AppTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout">
+    <style name="AppTextInputLayout" parent="Widget.Material3.TextInputLayout">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
@@ -8,7 +8,7 @@
         <item name="android:textColorHint">@color/md_theme_light_secondary</item>
     </style>
 
-    <style name="AppTextInputEditText" parent="Widget.MaterialComponents.TextInputEditText">
+    <style name="AppTextInputEditText" parent="Widget.Material3.TextInputEditText">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:padding">16dp</item>

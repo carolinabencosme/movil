@@ -9,6 +9,7 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.util.AppLogger
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.FirebaseNetworkException
@@ -21,6 +22,10 @@ class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_login)
+
+    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+    setSupportActionBar(toolbar)
+    supportActionBar?.title = getString(R.string.login_title)
 
     val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
     val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)

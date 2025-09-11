@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.repository.UserRepository
 import com.example.projectandroid.util.AppLogger
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -27,6 +28,10 @@ class SearchUserActivity : AppCompatActivity() {
         }
 
         setContentView(R.layout.activity_search_user)
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+        setSupportActionBar(toolbar)
+        supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
         adapter = UserAdapter { user ->
             val intent = Intent(this, ChatActivity::class.java).apply {
@@ -57,5 +62,10 @@ class SearchUserActivity : AppCompatActivity() {
                 return true
             }
         })
+    }
+
+    override fun onSupportNavigateUp(): Boolean {
+        finish()
+        return true
     }
 }

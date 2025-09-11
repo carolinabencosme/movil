@@ -94,8 +94,12 @@ class ChatActivity : AppCompatActivity() {
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
       )
-      ref.add(data).addOnFailureListener { e -> AppLogger.logError(this, e) }
-      ref.add(data).addOnFailureListener { e -> ErrorLogger.log(this, e) }
+      ref
+        .add(data)
+        .addOnFailureListener { e ->
+          AppLogger.logError(this, e)
+          ErrorLogger.log(this, e)
+        }
 
       //nuevo
 

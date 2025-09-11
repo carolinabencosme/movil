@@ -21,6 +21,13 @@ import com.google.firebase.ktx.Firebase
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    if (Firebase.auth.currentUser != null) {
+      startActivity(Intent(this, ChatListActivity::class.java))
+      finish()
+      return
+    }
+
     setContentView(R.layout.activity_login)
 
     val toolbar = findViewById<Toolbar>(R.id.topAppBar)

@@ -44,7 +44,7 @@ class LoginActivityTest {
     }
 
     @Test
-    fun successfulLoginNavigatesToSearchUserActivity() {
+    fun successfulLoginNavigatesToMainActivity() {
         val auth: FirebaseAuth = mockk()
         val task = mockk<com.google.android.gms.tasks.Task<AuthResult>>()
         every { Firebase.auth } returns auth
@@ -59,6 +59,6 @@ class LoginActivityTest {
         onView(withId(R.id.editEmail)).perform(replaceText("user@test.com"), closeSoftKeyboard())
         onView(withId(R.id.editPassword)).perform(replaceText("123456"), closeSoftKeyboard())
         onView(withId(R.id.buttonLogin)).perform(click())
-        intended(hasComponent(SearchUserActivity::class.java.name))
+        intended(hasComponent(MainActivity::class.java.name))
     }
 }

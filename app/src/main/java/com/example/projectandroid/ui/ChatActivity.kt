@@ -6,9 +6,9 @@ import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import androidx.appcompat.widget.Toolbar
+import android.widget.Button
+import android.widget.EditText
 import com.example.projectandroid.R
 import com.example.projectandroid.model.Message
 import com.google.firebase.auth.ktx.auth
@@ -23,8 +23,8 @@ class ChatActivity : AppCompatActivity() {
 
   private lateinit var recyclerView: RecyclerView
   private lateinit var adapter: ChatAdapter
-  private lateinit var messageInput: TextInputEditText
-  private lateinit var sendButton: MaterialButton
+  private lateinit var messageInput: EditText
+  private lateinit var sendButton: Button
   private lateinit var listenerRegistration: ListenerRegistration
 
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -51,7 +51,7 @@ class ChatActivity : AppCompatActivity() {
   private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {
     setContentView(R.layout.activity_chat)
 
-    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+    val toolbar = findViewById<Toolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = recipientName

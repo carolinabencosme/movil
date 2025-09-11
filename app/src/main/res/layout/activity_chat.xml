@@ -5,12 +5,12 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.google.android.material.appbar.MaterialToolbar
+    <androidx.appcompat.widget.Toolbar
         android:id="@+id/topAppBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="?attr/colorPrimary"
-        android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
@@ -24,26 +24,22 @@
         android:orientation="horizontal"
         android:padding="8dp">
 
-        <com.google.android.material.textfield.TextInputLayout
+        <androidx.appcompat.widget.AppCompatEditText
+            android:id="@+id/editMessage"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Escribe un mensaje">
+            android:hint="Escribe un mensaje"
+            android:padding="16dp" />
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editMessage"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.button.MaterialButton
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/buttonSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enviar"
-            app:icon="@drawable/ic_send"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp" />
+            android:drawableStart="@drawable/ic_send"
+            android:backgroundTint="?attr/colorPrimary"
+            android:textColor="@android:color/white" />
     </LinearLayout>
 
 </LinearLayout>

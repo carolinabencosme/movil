@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
 import com.example.projectandroid.util.AppLogger
+import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.ktx.auth
@@ -19,6 +20,10 @@ class RegisterActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_register)
+
+    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
+    setSupportActionBar(toolbar)
+    supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
     val nameInput = findViewById<TextInputEditText>(R.id.editName)
     val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
@@ -73,5 +78,10 @@ class RegisterActivity : AppCompatActivity() {
           Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
         }
     }
+  }
+
+  override fun onSupportNavigateUp(): Boolean {
+    finish()
+    return true
   }
 }

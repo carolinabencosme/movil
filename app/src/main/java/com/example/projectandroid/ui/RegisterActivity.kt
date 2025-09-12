@@ -10,7 +10,8 @@ import com.example.projectandroid.model.User
 import com.example.projectandroid.util.AppLogger
 import androidx.appcompat.widget.Toolbar
 import android.widget.Button
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
@@ -25,9 +26,12 @@ class RegisterActivity : AppCompatActivity() {
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
 
-    val nameInput = findViewById<EditText>(R.id.editName)
-    val emailInput = findViewById<EditText>(R.id.editEmail)
-    val passwordInput = findViewById<EditText>(R.id.editPassword)
+    val nameLayout = findViewById<TextInputLayout>(R.id.nameLayout)
+    val nameInput = findViewById<TextInputEditText>(R.id.editName)
+    val emailLayout = findViewById<TextInputLayout>(R.id.emailLayout)
+    val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
+    val passwordLayout = findViewById<TextInputLayout>(R.id.passwordLayout)
+    val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
     val registerButton = findViewById<Button>(R.id.buttonRegister)
 
     registerButton.setOnClickListener {
@@ -35,17 +39,21 @@ class RegisterActivity : AppCompatActivity() {
       val email = emailInput.text.toString().trim()
       val password = passwordInput.text.toString().trim()
 
+      nameLayout.error = null
+      emailLayout.error = null
+      passwordLayout.error = null
+
       var isValid = true
       if (name.isBlank()) {
-        nameInput.error = getString(R.string.required_field)
+        nameLayout.error = getString(R.string.required_field)
         isValid = false
       }
       if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-        emailInput.error = getString(R.string.invalid_email)
+        emailLayout.error = getString(R.string.invalid_email)
         isValid = false
       }
       if (password.length < 6) {
-        passwordInput.error = getString(R.string.invalid_password)
+        passwordLayout.error = getString(R.string.invalid_password)
         isValid = false
       }
       if (!isValid) return@setOnClickListener

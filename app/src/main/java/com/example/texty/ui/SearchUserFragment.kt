@@ -12,7 +12,9 @@ import androidx.core.widget.addTextChangedListener
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import com.example.texty.R
+import android.widget.Toast
 import com.example.texty.repository.UserRepository
+import com.example.texty.repository.FriendRequestRepository
 import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
@@ -20,7 +22,9 @@ import com.google.firebase.ktx.Firebase
 
 class SearchUserFragment : Fragment() {
     private val userRepository = UserRepository()
+    private val friendRepository = FriendRequestRepository()
     private lateinit var adapter: UserAdapter
+    private lateinit var currentUid: String
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -39,24 +43,34 @@ class SearchUserFragment : Fragment() {
             requireActivity().finish()
             return
         }
+        currentUid = auth.currentUser!!.uid
 
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
-        adapter = UserAdapter { user ->
-            val uid = user.uid.takeUnless { it.isBlank() }
-            val name = user.displayName.takeUnless { it.isBlank() }
-            if (uid == null || name == null) {
-                val error = IllegalArgumentException("User missing uid or displayName")
-                ErrorLogger.log(requireContext(), error)
-                return@UserAdapter
+        adapter = UserAdapter(
+            onClick = { user ->
+                friendRepository.areFriends(currentUid, user.uid) { isFriend ->
+                    if (isFriend) {
+                        val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                            putExtra("recipientUid", user.uid)
+                            putExtra("recipientName", user.displayName)
+                        }
+                        startActivity(intent)
+                    } else {
+                        Toast.makeText(requireContext(), R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+                    }
+                }
+            },
+            onAddClick = { user ->
+                friendRepository.sendRequest(currentUid, user.uid, onSuccess = {
+                    val updated = adapter.currentList.map {
+                        if (it.user.uid == user.uid) it.copy(requestStatus = "pending") else it
+                    }
+                    adapter.submitList(updated)
+                }, onFailure = { e -> AppLogger.logError(requireContext(), e) })
             }
-            val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                putExtra("recipientUid", uid)
-                putExtra("recipientName", name)
-            }
-            startActivity(intent)
-        }
+        )
 
         val recycler = view.findViewById<RecyclerView>(R.id.recyclerUsers)
         recycler.layoutManager = LinearLayoutManager(requireContext())
@@ -69,7 +83,25 @@ class SearchUserFragment : Fragment() {
                 adapter.submitList(emptyList())
             } else {
                 userRepository.getUsersByDisplayName(q, onSuccess = { users ->
-                    adapter.submitList(users)
+                    val items = users.filter { it.uid != currentUid }
+                        .map { UserListItem(it, "none") }
+                        .toMutableList()
+                    adapter.submitList(items.toList())
+                    items.forEachIndexed { index, item ->
+                        friendRepository.areFriends(currentUid, item.user.uid) { isFriend ->
+                            if (isFriend) {
+                                items[index] = item.copy(requestStatus = "friend")
+                                adapter.submitList(items.toList())
+                            } else {
+                                friendRepository.hasPendingRequest(currentUid, item.user.uid) { reqId ->
+                                    if (reqId != null) {
+                                        items[index] = item.copy(requestStatus = "pending")
+                                        adapter.submitList(items.toList())
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }, onFailure = { e ->
                     AppLogger.logError(requireContext(), e)
                 })

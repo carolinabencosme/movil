@@ -18,6 +18,8 @@
           android:background="?attr/colorSurface"
           app:menu="@menu/menu_bottom_nav"
           app:itemIconTint="@color/bottom_nav_colors"
-          app:itemTextColor="@color/bottom_nav_colors" />
+          app:itemTextColor="@color/bottom_nav_colors"
+          app:itemRippleColor="?attr/colorTertiary"
+          app:labelVisibilityMode="labeled" />
 
 </LinearLayout>

@@ -3,6 +3,9 @@
     <color name="md_theme_light_primary">#4CAF50</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
     <color name="md_theme_light_secondary">#03A9F4</color>
+    <color name="md_theme_light_tertiary">#FF9800</color>
+    <color name="md_theme_light_surfaceVariant">#E7E0EC</color>
+    <color name="md_theme_light_onSurface">#1C1B1F</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

@@ -6,6 +6,9 @@
         <!-- Colores principales de tu app -->
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
 
         <!-- Contraste sobre colorPrimary (botones/toolbar) -->
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>

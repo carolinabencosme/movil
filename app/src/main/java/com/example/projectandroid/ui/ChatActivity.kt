@@ -54,11 +54,16 @@ class ChatActivity : AppCompatActivity() {
       return
     }
 
-    val recipientUid = intent.getStringExtra("recipientUid")
-    val recipientName = intent.getStringExtra("recipientName")
-    if (recipientUid.isNullOrBlank() || recipientName.isNullOrBlank()) {
-      finish()
+    val recipientUid = intent.getStringExtra("recipientUid").takeUnless { it.isNullOrBlank() } ?: run {
+      val error = IllegalArgumentException("recipientUid extra is missing or blank")
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
       return
+    }
+
+    val recipientName = intent.getStringExtra("recipientName").takeUnless { it.isNullOrBlank() } ?: run {
+      AppLogger.logWarn("ChatActivity", "recipientName extra missing or blank, using default", this)
+      "Usuario"
     }
 
     initChat(currentUser.uid, recipientUid, recipientName)

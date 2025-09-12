@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Text field base style -->
     <style name="AppEditText" parent="Widget.AppCompat.EditText">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
@@ -10,29 +12,33 @@
         <item name="android:textColorHint">?attr/colorTertiary</item>
     </style>
 
+    <!-- Material 3 Buttons -->
     <style name="AppButton" parent="Widget.Material3.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+        <!-- Use the theme token for M3 shape -->
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
-    <style name="AppButton.Tonal" parent="Widget.Material3.Button.Tonal">
+    <style name="AppButton.Tonal" parent="Widget.Material3.Button.TonalButton">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
-    <style name="AppButton.Outlined" parent="Widget.Material3.Button.Outlined">
+    <style name="AppButton.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
+    <!-- Toolbar -->
     <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
+
 </resources>

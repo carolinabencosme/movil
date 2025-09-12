@@ -1,12 +1,12 @@
 package com.example.projectandroid.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
-import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.appcompat.widget.Toolbar
 import android.widget.Button
 import android.widget.EditText
 import com.example.projectandroid.R
@@ -18,6 +18,10 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.example.projectandroid.util.AppLogger
 import com.example.projectandroid.util.ErrorLogger
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.ktx.storage
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 
 class ChatActivity : AppCompatActivity() {
 
@@ -26,6 +30,18 @@ class ChatActivity : AppCompatActivity() {
   private lateinit var messageInput: EditText
   private lateinit var sendButton: Button
   private lateinit var listenerRegistration: ListenerRegistration
+
+  private val pickImageLauncher = registerForActivityResult(
+    ActivityResultContracts.GetContent()
+  ) { uri: Uri? ->
+    val currentUser = Firebase.auth.currentUser ?: return@registerForActivityResult
+    val recipientUid = intent.getStringExtra("recipientUid") ?: return@registerForActivityResult
+    val recipientName = intent.getStringExtra("recipientName") ?: return@registerForActivityResult
+    val roomId = listOf(currentUser.uid, recipientUid).sorted().joinToString("_")
+    if (uri != null) {
+      sendImageMessage(roomId, currentUser.uid, recipientUid, recipientName, uri)
+    }
+  }
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
@@ -51,7 +67,13 @@ class ChatActivity : AppCompatActivity() {
   private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {
     setContentView(R.layout.activity_chat)
 
-    val toolbar = findViewById<Toolbar>(R.id.topAppBar)
+    // Botón para enviar imagen (mergebranch)
+    val sendImageButton = findViewById<MaterialButton>(R.id.buttonSendImage)
+    sendImageButton.setOnClickListener {
+      pickImageLauncher.launch("image/*")
+    }
+
+    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = recipientName
@@ -65,7 +87,6 @@ class ChatActivity : AppCompatActivity() {
       stackFromEnd = true
     }
     recyclerView.adapter = adapter
-
 
     val roomId = listOf(currentUid, recipientUid).sorted().joinToString("_")
     val ref = Firebase.firestore
@@ -94,15 +115,14 @@ class ChatActivity : AppCompatActivity() {
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
       )
-      ref
-        .add(data)
-        .addOnFailureListener { e ->
-          AppLogger.logError(this, e)
-          ErrorLogger.log(this, e)
-        }
 
-      //nuevo
+      // Agregar el mensaje a Firestore (mergebranch)
+      ref.add(data).addOnFailureListener { e ->
+        AppLogger.logError(this, e)
+        ErrorLogger.log(this, e)
+      }
 
+      // Actualizar el resumen del chat (mergebranch)
       val roomData = mapOf(
         "participantIds" to listOf(currentUid, recipientUid),
         "userNames" to mapOf(
@@ -113,7 +133,7 @@ class ChatActivity : AppCompatActivity() {
         "updatedAt" to FieldValue.serverTimestamp()
       )
       Firebase.firestore.collection("rooms").document(roomId)
-        .set(roomData, com.google.firebase.firestore.SetOptions.merge())
+        .set(roomData, SetOptions.merge())
 
       messageInput.text?.clear()
     }
@@ -129,5 +149,47 @@ class ChatActivity : AppCompatActivity() {
   override fun onSupportNavigateUp(): Boolean {
     finish()
     return true
+  }
+
+  private fun sendImageMessage(
+    roomId: String,
+    currentUid: String,
+    recipientUid: String,
+    recipientName: String,
+    imageUri: Uri
+  ) {
+    val storageRef = Firebase.storage.reference
+      .child("chat_images/$roomId/${System.currentTimeMillis()}.jpg")
+
+    storageRef.putFile(imageUri)
+      .addOnSuccessListener {
+        storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
+          val data = mapOf(
+            "senderId" to currentUid,
+            "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
+            "imageUrl" to downloadUrl.toString(),
+            "createdAt" to FieldValue.serverTimestamp()
+          )
+
+          Firebase.firestore.collection("rooms")
+            .document(roomId)
+            .collection("messages")
+            .add(data)
+
+          val roomData = mapOf(
+            "participantIds" to listOf(currentUid, recipientUid),
+            "userNames" to mapOf(
+              currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+              recipientUid to recipientName
+            ),
+            "lastMessage" to "Imagen",
+            "updatedAt" to FieldValue.serverTimestamp()
+          )
+
+          Firebase.firestore.collection("rooms").document(roomId)
+            .set(roomData, SetOptions.merge())
+        }
+      }
+      .addOnFailureListener { e -> ErrorLogger.log(this, e) }
   }
 }

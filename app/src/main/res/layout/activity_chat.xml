@@ -10,13 +10,12 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <androidx.appcompat.widget.Toolbar
+        <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/topAppBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:background="?attr/colorPrimary"
-            android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
-
+            android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <androidx.recyclerview.widget.RecyclerView
@@ -31,22 +30,40 @@
         android:orientation="horizontal"
         android:padding="8dp">
 
-        <androidx.appcompat.widget.AppCompatEditText
-            android:id="@+id/editMessage"
+        <!-- Botón para seleccionar imagen -->
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/buttonSendImage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="📷" />
+
+        <!-- Campo de texto con TextInputLayout -->
+        <com.google.android.material.textfield.TextInputLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:hint="Escribe un mensaje"
-            android:padding="16dp" />
+            android:layout_marginStart="8dp"
+            android:hint="Escribe un mensaje">
 
-        <androidx.appcompat.widget.AppCompatButton
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editMessage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:maxLines="4"
+                android:minLines="1"
+                android:inputType="textCapSentences|textMultiLine" />
+        </com.google.android.material.textfield.TextInputLayout>
+
+        <!-- Botón enviar -->
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Enviar"
-            android:drawableStart="@drawable/ic_send"
-            android:backgroundTint="?attr/colorPrimary"
-            android:textColor="@android:color/white" />
+            app:icon="@drawable/ic_send"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            android:layout_marginStart="8dp" />
     </LinearLayout>
 
 </LinearLayout>

@@ -7,5 +7,6 @@ data class Message(
     val senderName: String = "",
     val text: String = "",
     //val createdAt: Timestamp = Timestamp.now()
-    val createdAt: Timestamp? = null
+    val createdAt: Timestamp? = null,
+    val imageUrl: String? = null
 )

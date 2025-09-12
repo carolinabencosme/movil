@@ -5,18 +5,33 @@
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:textColor">?attr/colorOnSecondaryContainer</item>
-        <item name="android:textColorHint">?attr/colorSecondary</item>
+        <item name="android:backgroundTint">?attr/colorSurfaceVariant</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textColorHint">?attr/colorTertiary</item>
     </style>
 
-    <style name="AppButton" parent="Widget.MaterialComponents.Button">
+    <style name="AppButton" parent="Widget.Material3.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:backgroundTint">?attr/colorPrimary</item>
-        <item name="android:textColor">?attr/colorOnPrimary</item>
-        <item name="cornerRadius">8dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+    </style>
+
+    <style name="AppButton.Tonal" parent="Widget.Material3.Button.Tonal">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+    </style>
+
+    <style name="AppButton.Outlined" parent="Widget.Material3.Button.Outlined">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
     </style>
 
     <style name="AppToolbar" parent="Widget.Material3.Toolbar" />

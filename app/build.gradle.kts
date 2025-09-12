@@ -58,4 +58,12 @@ dependencies {
     // Delegado `by viewModels()` para Activities/Fragments
     implementation("androidx.activity:activity-ktx:1.9.2")   // para Activities
     implementation("androidx.fragment:fragment-ktx:1.8.3")   // para Fragments (si lo usas)
+
+    //imagenes
+    implementation("com.google.firebase:firebase-storage-ktx:21.0.0")
+    // Glide (para cargar imágenes)
+
+    implementation("com.github.bumptech.glide:glide:4.16.0")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
+
 }

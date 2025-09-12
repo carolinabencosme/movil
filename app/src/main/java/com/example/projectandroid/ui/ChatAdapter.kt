@@ -1,9 +1,11 @@
 package com.example.projectandroid.ui
 
-import android.view.Gravity
+import com.bumptech.glide.Glide
+
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.recyclerview.widget.DiffUtil
@@ -22,6 +24,7 @@ class ChatAdapter(
         val root: LinearLayout = view.findViewById(R.id.messageRoot)
         val messageText: TextView = view.findViewById(R.id.textMessage)
         val timeText: TextView = view.findViewById(R.id.textTime)
+        val imageView: ImageView = view.findViewById(R.id.imageMessage)
     }
 
     private val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
@@ -32,7 +35,7 @@ class ChatAdapter(
         return MessageViewHolder(view)
     }
 
-    override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
+    /*override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
         holder.messageText.text = message.text
         //holder.timeText.text = timeFormatter.format(message.createdAt.toDate())
@@ -53,7 +56,27 @@ class ChatAdapter(
             holder.root.gravity = Gravity.START
             holder.messageText.setBackgroundResource(R.drawable.bg_bubble_other)
         }
+    }*/
+
+    override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
+        val message = getItem(position)
+
+        if (!message.text.isNullOrBlank()) {
+            holder.messageText.visibility = View.VISIBLE
+            holder.imageView.visibility = View.GONE
+            holder.messageText.text = message.text
+        } else if (!message.imageUrl.isNullOrBlank()) {
+            holder.messageText.visibility = View.GONE
+            holder.imageView.visibility = View.VISIBLE
+            Glide.with(holder.itemView.context)
+                .load(message.imageUrl)
+                .into(holder.imageView)
+        }
+
+        val ts = message.createdAt
+        holder.timeText.text = ts?.toDate()?.let { timeFormatter.format(it) } ?: ""
     }
+
 
     fun addOne(message: Message) {
         val newList = currentList.toMutableList()

@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Toast
 import com.example.texty.R
 import com.example.texty.model.Message
 import com.google.firebase.auth.ktx.auth
@@ -22,6 +23,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.ktx.storage
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.example.texty.repository.FriendRequestRepository
 
 class ChatActivity : AppCompatActivity() {
 
@@ -69,8 +71,14 @@ class ChatActivity : AppCompatActivity() {
       finish()
       return
     }
-
-    initChat(currentUser.uid, recipientUid, recipientName)
+    FriendRequestRepository().areFriends(currentUser.uid, recipientUid) { isFriend ->
+      if (isFriend) {
+        initChat(currentUser.uid, recipientUid, recipientName)
+      } else {
+        Toast.makeText(this, R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+        finish()
+      }
+    }
   }
 
   private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {

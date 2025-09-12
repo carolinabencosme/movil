@@ -10,4 +10,5 @@ data class User(
     val isOnline: Boolean = false,
     val about: String = "",
     val phone: String = "",
+    val friends: List<String> = emptyList(),
 )

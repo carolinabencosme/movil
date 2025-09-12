@@ -9,14 +9,22 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
 import com.example.texty.model.User
+import com.google.android.material.button.MaterialButton
+
+/**
+ * Item combining a user with friend request status.
+ */
+data class UserListItem(val user: User, val requestStatus: String)
 
 class UserAdapter(
-    private val onClick: (User) -> Unit
-) : ListAdapter<User, UserAdapter.UserViewHolder>(DIFF_CALLBACK) {
+    private val onClick: (User) -> Unit,
+    private val onAddClick: (User) -> Unit,
+) : ListAdapter<UserListItem, UserAdapter.UserViewHolder>(DIFF_CALLBACK) {
 
     class UserViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.textName)
         val statusView: View = view.findViewById(R.id.viewStatus)
+        val addButton: MaterialButton = view.findViewById(R.id.buttonAdd)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
@@ -26,21 +34,37 @@ class UserAdapter(
     }
 
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
-        val user = getItem(position)
+        val item = getItem(position)
+        val user = item.user
         holder.nameText.text = user.displayName
         holder.statusView.setBackgroundResource(
             if (user.isOnline) R.drawable.online_indicator else R.drawable.offline_indicator
         )
         holder.itemView.setOnClickListener { onClick(user) }
+        when (item.requestStatus) {
+            "pending" -> {
+                holder.addButton.text = "Pendiente"
+                holder.addButton.isEnabled = false
+            }
+            "friend" -> {
+                holder.addButton.text = "Amigos"
+                holder.addButton.isEnabled = false
+            }
+            else -> {
+                holder.addButton.text = "Añadir"
+                holder.addButton.isEnabled = true
+                holder.addButton.setOnClickListener { onAddClick(user) }
+            }
+        }
     }
 
     companion object {
-        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<User>() {
-            override fun areItemsTheSame(oldItem: User, newItem: User): Boolean {
-                return oldItem.uid == newItem.uid
+        private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<UserListItem>() {
+            override fun areItemsTheSame(oldItem: UserListItem, newItem: UserListItem): Boolean {
+                return oldItem.user.uid == newItem.user.uid
             }
 
-            override fun areContentsTheSame(oldItem: User, newItem: User): Boolean {
+            override fun areContentsTheSame(oldItem: UserListItem, newItem: UserListItem): Boolean {
                 return oldItem == newItem
             }
         }

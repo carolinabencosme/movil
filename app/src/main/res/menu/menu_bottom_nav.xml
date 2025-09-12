@@ -9,6 +9,10 @@
         android:title="Buscar"
         android:icon="@drawable/ic_search" />
     <item
+        android:id="@+id/navigation_requests"
+        android:title="Solicitudes"
+        android:icon="@drawable/ic_person" />
+    <item
         android:id="@+id/navigation_profile"
         android:title="Perfil"
         android:icon="@drawable/ic_person" />

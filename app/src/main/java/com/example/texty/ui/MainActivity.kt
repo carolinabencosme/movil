@@ -29,6 +29,10 @@ class MainActivity : AppCompatActivity() {
                     replaceFragment(SearchUserFragment())
                     true
                 }
+                R.id.navigation_requests -> {
+                    replaceFragment(FriendRequestsFragment())
+                    true
+                }
                 R.id.navigation_profile -> {
                     replaceFragment(ProfileFragment())
                     true

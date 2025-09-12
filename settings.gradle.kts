@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "projectAndroid"
+rootProject.name = "Texty"
 include(":app")
  

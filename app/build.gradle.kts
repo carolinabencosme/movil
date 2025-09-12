@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.projectandroid"
+    namespace = "com.example.texty"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.projectandroid"
+        applicationId = "com.example.texty"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

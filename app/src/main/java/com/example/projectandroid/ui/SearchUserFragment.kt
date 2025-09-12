@@ -8,8 +8,9 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
+import androidx.core.widget.addTextChangedListener
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.textfield.TextInputEditText
 import com.example.projectandroid.R
 import com.example.projectandroid.repository.UserRepository
 import com.example.projectandroid.util.AppLogger
@@ -39,7 +40,7 @@ class SearchUserFragment : Fragment() {
             return
         }
 
-        val toolbar = view.findViewById<Toolbar>(R.id.topAppBar)
+        val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
         adapter = UserAdapter { user ->
@@ -61,22 +62,18 @@ class SearchUserFragment : Fragment() {
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
 
-        val searchView = view.findViewById<SearchView>(R.id.searchView)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean = false
-            override fun onQueryTextChange(newText: String?): Boolean {
-                val q = newText ?: ""
-                if (q.isBlank()) {
-                    adapter.submitList(emptyList())
-                } else {
-                    userRepository.getUsersByDisplayName(q, onSuccess = { users ->
-                        adapter.submitList(users)
-                    }, onFailure = { e ->
-                        AppLogger.logError(requireContext(), e)
-                    })
-                }
-                return true
+        val searchInput = view.findViewById<TextInputEditText>(R.id.editSearch)
+        searchInput.addTextChangedListener { text ->
+            val q = text?.toString() ?: ""
+            if (q.isBlank()) {
+                adapter.submitList(emptyList())
+            } else {
+                userRepository.getUsersByDisplayName(q, onSuccess = { users ->
+                    adapter.submitList(users)
+                }, onFailure = { e ->
+                    AppLogger.logError(requireContext(), e)
+                })
             }
-        })
+        }
     }
 }

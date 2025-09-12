@@ -22,14 +22,15 @@ import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import androidx.appcompat.widget.SearchView
-import androidx.appcompat.widget.Toolbar
+import androidx.core.widget.addTextChangedListener
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
     private lateinit var adapter: ChatListAdapter
-    private lateinit var searchView: SearchView
+    private lateinit var searchInput: TextInputEditText
     private var allRooms: List<ChatRoom> = emptyList()
 
     override fun onCreateView(
@@ -45,7 +46,7 @@ class ChatListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val currentUser = Firebase.auth.currentUser!!
-        val toolbar = view.findViewById<Toolbar>(R.id.topAppBar)
+        val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
@@ -71,14 +72,10 @@ class ChatListFragment : Fragment() {
         recycler.adapter = adapter
         recycler.addItemDecoration(DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL))
 
-        searchView = view.findViewById(R.id.searchView)
-        searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String?): Boolean = false
-            override fun onQueryTextChange(newText: String?): Boolean {
-                filterRooms(newText ?: "")
-                return true
-            }
-        })
+        searchInput = view.findViewById<TextInputEditText>(R.id.editSearch)
+        searchInput.addTextChangedListener { text ->
+            filterRooms(text?.toString() ?: "")
+        }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
             progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
@@ -91,7 +88,7 @@ class ChatListFragment : Fragment() {
             } else {
                 placeholder.visibility = View.GONE
                 recycler.visibility = View.VISIBLE
-                filterRooms(searchView.query.toString())
+                filterRooms(searchInput.text?.toString() ?: "")
             }
         }
         viewModel.error.observe(viewLifecycleOwner) { e ->

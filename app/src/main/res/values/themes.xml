@@ -9,6 +9,7 @@
 
         <!-- Contraste sobre colorPrimary (botones/toolbar) -->
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
+        <item name="toolbarStyle">@style/AppToolbar</item>
     </style>
 
     <!-- Tema de la app -->

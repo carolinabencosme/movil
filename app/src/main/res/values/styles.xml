@@ -18,4 +18,6 @@
         <item name="android:textColor">?attr/colorOnPrimary</item>
         <item name="cornerRadius">8dp</item>
     </style>
+
+    <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
 </resources>

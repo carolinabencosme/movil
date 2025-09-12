@@ -9,6 +9,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
@@ -52,6 +53,7 @@ class ProfileFragment : Fragment() {
         val aboutInput = view.findViewById<TextInputEditText>(R.id.editAbout)
         val phoneInput = view.findViewById<TextInputEditText>(R.id.editPhone)
         val buttonSave = view.findViewById<Button>(R.id.buttonSave)
+        val buttonChangePassword = view.findViewById<Button>(R.id.buttonChangePassword)
         val buttonLogout = view.findViewById<Button>(R.id.buttonLogout)
         val buttonEdit = view.findViewById<MaterialButton>(R.id.buttonEdit)
 
@@ -110,6 +112,25 @@ class ProfileFragment : Fragment() {
             } else {
                 updateProfile(user.photoUrl)
             }
+        }
+
+        buttonChangePassword.setOnClickListener {
+            val email = user?.email ?: return@setOnClickListener
+            FirebaseAuth.getInstance().sendPasswordResetEmail(email)
+                .addOnSuccessListener {
+                    Toast.makeText(
+                        requireContext(),
+                        getString(R.string.password_reset_email_sent),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(
+                        requireContext(),
+                        e.localizedMessage ?: getString(R.string.error_generic),
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
         }
 
         buttonLogout.setOnClickListener {

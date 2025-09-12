@@ -15,7 +15,7 @@
             style="@style/AppToolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
+            android:background="@drawable/bg_gradient_primary"
             android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -60,6 +60,7 @@
             android:id="@+id/buttonSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_gradient_primary"
             android:text="Enviar"
             app:icon="@drawable/ic_send"
             app:iconGravity="textStart"

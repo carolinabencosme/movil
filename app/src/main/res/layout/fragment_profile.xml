@@ -8,6 +8,7 @@
         android:id="@+id/profileToolbar"
         android:layout_width="0dp"
         android:layout_height="?attr/actionBarSize"
+        android:background="@drawable/bg_gradient_primary"
         android:title="@string/profile_title"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"

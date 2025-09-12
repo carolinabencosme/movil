@@ -85,7 +85,7 @@
                 android:textColorHint="@color/md_theme_light_secondary" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <androidx.appcompat.widget.AppCompatButton
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonRegister"
             style="@style/AppButton"
             android:text="Register"

@@ -13,6 +13,7 @@ import androidx.appcompat.widget.Toolbar
 import com.example.projectandroid.R
 import com.example.projectandroid.repository.UserRepository
 import com.example.projectandroid.util.AppLogger
+import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
@@ -42,9 +43,16 @@ class SearchUserFragment : Fragment() {
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
         adapter = UserAdapter { user ->
+            val uid = user.uid.takeUnless { it.isBlank() }
+            val name = user.displayName.takeUnless { it.isBlank() }
+            if (uid == null || name == null) {
+                val error = IllegalArgumentException("User missing uid or displayName")
+                ErrorLogger.log(requireContext(), error)
+                return@UserAdapter
+            }
             val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                putExtra("recipientUid", user.uid)
-                putExtra("recipientName", user.displayName)
+                putExtra("recipientUid", uid)
+                putExtra("recipientName", name)
             }
             startActivity(intent)
         }

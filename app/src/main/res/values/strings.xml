@@ -19,4 +19,8 @@
     <string name="register_title">Registro</string>
     <string name="search_user_title">Buscar usuario</string>
     <string name="search_hint">Buscar</string>
+    <string name="profile_title">Perfil</string>
+    <string name="edit">Editar</string>
+    <string name="profile_about">Acerca de</string>
+    <string name="profile_phone">Teléfono</string>
 </resources>

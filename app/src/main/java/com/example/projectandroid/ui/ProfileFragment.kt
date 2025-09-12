@@ -49,6 +49,8 @@ class ProfileFragment : Fragment() {
         val imageProfile = view.findViewById<ImageView>(R.id.imageProfile)
         val nameInput = view.findViewById<TextInputEditText>(R.id.editDisplayName)
         val emailText = view.findViewById<TextView>(R.id.textUserEmail)
+        val aboutInput = view.findViewById<TextInputEditText>(R.id.editAbout)
+        val phoneInput = view.findViewById<TextInputEditText>(R.id.editPhone)
         val buttonSave = view.findViewById<Button>(R.id.buttonSave)
         val buttonLogout = view.findViewById<Button>(R.id.buttonLogout)
         val buttonEdit = view.findViewById<MaterialButton>(R.id.buttonEdit)
@@ -57,12 +59,24 @@ class ProfileFragment : Fragment() {
         emailText.text = "Correo: ${user?.email ?: ""}"
         Glide.with(this).load(user?.photoUrl).placeholder(R.drawable.ic_person).into(imageProfile)
 
+        val uid = user?.uid
+        if (uid != null) {
+            Firebase.firestore.collection("users").document(uid).get()
+                .addOnSuccessListener { doc ->
+                    val profile = doc.toObject(User::class.java)
+                    aboutInput.setText(profile?.about ?: "")
+                    phoneInput.setText(profile?.phone ?: "")
+                }
+        }
+
         imageProfile.setOnClickListener { pickImage.launch("image/*") }
         buttonEdit.setOnClickListener { pickImage.launch("image/*") }
 
         buttonSave.setOnClickListener {
             val uid = user?.uid ?: return@setOnClickListener
             val name = nameInput.text.toString().trim()
+            val about = aboutInput.text.toString().trim()
+            val phone = phoneInput.text.toString().trim()
             val storageRef = Firebase.storage.reference.child("profileImages/$uid.jpg")
 
             fun updateProfile(photoUri: Uri?) {
@@ -71,7 +85,14 @@ class ProfileFragment : Fragment() {
                     this.photoUri = photoUri
                 }
                 user.updateProfile(profileUpdates).addOnSuccessListener {
-                    val profile = User(uid = uid, displayName = name, photoUrl = photoUri?.toString(), isOnline = true)
+                    val profile = User(
+                        uid = uid,
+                        displayName = name,
+                        photoUrl = photoUri?.toString(),
+                        isOnline = true,
+                        about = about,
+                        phone = phone,
+                    )
                     Firebase.firestore.collection("users").document(uid).set(profile)
                 }
             }

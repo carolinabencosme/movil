@@ -8,4 +8,6 @@ data class User(
     val displayName: String = "",
     val photoUrl: String? = null,
     val isOnline: Boolean = false,
+    val about: String = "",
+    val phone: String = "",
 )

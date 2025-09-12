@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.shape.MaterialShapeDrawable xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:tint="?attr/colorSurfaceVariant"
-    app:cornerFamily="rounded"
-    app:cornerSizeTopStart="16dp"
-    app:cornerSizeTopEnd="16dp"
-    app:cornerSizeBottomStart="0dp"
-    app:cornerSizeBottomEnd="16dp" />

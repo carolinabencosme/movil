@@ -9,7 +9,7 @@
             android:id="@+id/toolbar"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
+            android:background="@drawable/bg_gradient_primary"
             android:titleTextColor="?attr/colorOnPrimary"
             app:title="@string/app_name"
             app:navigationIconTint="?attr/colorOnPrimary"

@@ -8,7 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
 import com.example.projectandroid.util.AppLogger
-import androidx.appcompat.widget.Toolbar
+import com.google.android.material.appbar.MaterialToolbar
 import android.widget.Button
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
@@ -22,7 +22,7 @@ class RegisterActivity : AppCompatActivity() {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_register)
 
-    val toolbar = findViewById<Toolbar>(R.id.topAppBar)
+    val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
 

@@ -28,7 +28,7 @@ class ChatAdapter(
         val imageView: ImageView = view.findViewById(R.id.imageMessage)
     }
 
-    private val timeFormatter = SimpleDateFormat("HH:mm", Locale.getDefault())
+    private val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -93,7 +93,13 @@ class ChatAdapter(
         }
 
         val ts = message.createdAt
-        holder.timeText.text = ts?.toDate()?.let { timeFormatter.format(it) } ?: ""
+        if (ts != null) {
+            holder.timeText.text = timeFormatter.format(ts.toDate())
+            holder.timeText.visibility = View.VISIBLE
+        } else {
+            holder.timeText.text = ""
+            holder.timeText.visibility = View.INVISIBLE
+        }
     }
 
 

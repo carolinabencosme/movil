@@ -2,7 +2,7 @@
 <resources>
 
     <!-- Base application theme using Material 3 -->
-    <style name="Base.Theme.ProjectAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.Texty" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Colores principales de tu app -->
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorSecondary">@color/md_theme_light_secondary</item>
@@ -19,6 +19,6 @@
     </style>
 
     <!-- Tema de la app -->
-    <style name="Theme.ProjectAndroid" parent="Base.Theme.ProjectAndroid" />
+    <style name="Theme.Texty" parent="Base.Theme.Texty" />
 
 </resources>

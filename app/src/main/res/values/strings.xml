@@ -23,4 +23,10 @@
     <string name="edit">Editar</string>
     <string name="profile_about">Acerca de</string>
     <string name="profile_phone">Teléfono</string>
+    <string name="change_password">Cambiar contraseña</string>
+    <string name="password_reset_email_sent">Correo de restablecimiento enviado</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="enable_notifications">Recibir notificaciones</string>
+    <string name="privacy">Privacidad</string>
+    <string name="private_account">Cuenta privada</string>
 </resources>

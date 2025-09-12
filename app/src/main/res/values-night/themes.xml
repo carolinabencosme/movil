@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Tema base (night) con Material 3 -->
-    <style name="Base.Theme.ProjectAndroid" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Base.Theme.Texty" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorSecondary">@color/md_theme_light_secondary</item>
         <item name="colorTertiary">@color/md_theme_light_tertiary</item>
@@ -14,5 +14,5 @@
     </style>
 
     <!-- Alias del tema de la app (igual que en values/) -->
-    <style name="Theme.ProjectAndroid" parent="Base.Theme.ProjectAndroid" />
+    <style name="Theme.Texty" parent="Base.Theme.Texty" />
 </resources>

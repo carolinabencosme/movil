@@ -105,7 +105,9 @@ class ChatActivity : AppCompatActivity() {
           AppLogger.logError(this, error)
           return@addSnapshotListener
         }
-        val messages = value?.documents?.mapNotNull { it.toObject(Message::class.java) } ?: return@addSnapshotListener
+        val messages = value?.documents?.mapNotNull { doc ->
+          doc.toObject(Message::class.java)?.copy(id = doc.id)
+        } ?: return@addSnapshotListener
         adapter.submitList(messages)
         if (adapter.itemCount > 0) recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
       }

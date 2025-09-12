@@ -14,6 +14,7 @@ import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
 import com.example.projectandroid.R
 import com.example.projectandroid.model.User
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
@@ -50,12 +51,14 @@ class ProfileFragment : Fragment() {
         val emailText = view.findViewById<TextView>(R.id.textUserEmail)
         val buttonSave = view.findViewById<Button>(R.id.buttonSave)
         val buttonLogout = view.findViewById<Button>(R.id.buttonLogout)
+        val buttonEdit = view.findViewById<MaterialButton>(R.id.buttonEdit)
 
         nameInput.setText(user?.displayName ?: "")
         emailText.text = "Correo: ${user?.email ?: ""}"
         Glide.with(this).load(user?.photoUrl).placeholder(R.drawable.ic_person).into(imageProfile)
 
         imageProfile.setOnClickListener { pickImage.launch("image/*") }
+        buttonEdit.setOnClickListener { pickImage.launch("image/*") }
 
         buttonSave.setOnClickListener {
             val uid = user?.uid ?: return@setOnClickListener

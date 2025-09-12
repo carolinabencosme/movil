@@ -2,6 +2,7 @@ package com.example.projectandroid.ui
 
 import com.bumptech.glide.Glide
 
+import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -71,6 +72,24 @@ class ChatAdapter(
             Glide.with(holder.itemView.context)
                 .load(message.imageUrl)
                 .into(holder.imageView)
+        }
+
+        if (message.senderId == myUid) {
+            holder.root.gravity = Gravity.END
+            if (holder.messageText.visibility == View.VISIBLE) {
+                holder.messageText.setBackgroundResource(R.drawable.bg_bubble_me)
+            }
+            if (holder.imageView.visibility == View.VISIBLE) {
+                holder.imageView.setBackgroundResource(R.drawable.bg_bubble_me)
+            }
+        } else {
+            holder.root.gravity = Gravity.START
+            if (holder.messageText.visibility == View.VISIBLE) {
+                holder.messageText.setBackgroundResource(R.drawable.bg_bubble_other)
+            }
+            if (holder.imageView.visibility == View.VISIBLE) {
+                holder.imageView.setBackgroundResource(R.drawable.bg_bubble_other)
+            }
         }
 
         val ts = message.createdAt

@@ -22,19 +22,17 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
-            android:name=".ui.ChatListActivity"
+            android:name=".ui.MainActivity"
+            android:exported="true" />
+
+        <activity
+            android:name=".ui.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".ui.SearchUserActivity"
-            android:exported="false" />
-
-        <activity android:name=".ui.LoginActivity" android:exported="false" />
         <activity android:name=".ui.RegisterActivity" android:exported="false" />
 
         <provider

@@ -9,8 +9,9 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.projectandroid.R
 import com.example.projectandroid.util.AppLogger
-import com.google.android.material.button.MaterialButton
-import com.google.android.material.textfield.TextInputEditText
+import androidx.appcompat.widget.Toolbar
+import android.widget.Button
+import android.widget.EditText
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -20,12 +21,23 @@ import com.google.firebase.ktx.Firebase
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
+
+    if (Firebase.auth.currentUser != null) {
+      startActivity(Intent(this, MainActivity::class.java))
+      finish()
+      return
+    }
+
     setContentView(R.layout.activity_login)
 
-    val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
-    val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
-    val loginButton = findViewById<MaterialButton>(R.id.buttonLogin)
-    val registerButton = findViewById<MaterialButton>(R.id.buttonRegister)
+    val toolbar = findViewById<Toolbar>(R.id.topAppBar)
+    setSupportActionBar(toolbar)
+    supportActionBar?.title = getString(R.string.login_title)
+
+    val emailInput = findViewById<EditText>(R.id.editEmail)
+    val passwordInput = findViewById<EditText>(R.id.editPassword)
+    val loginButton = findViewById<Button>(R.id.buttonLogin)
+    val registerButton = findViewById<Button>(R.id.buttonRegister)
     val progressBar = findViewById<ProgressBar>(R.id.progressBar)
 
     loginButton.setOnClickListener {
@@ -52,7 +64,7 @@ class LoginActivity : AppCompatActivity() {
           loginButton.isEnabled = true
         }
         .addOnSuccessListener {
-          startActivity(Intent(this, ChatListActivity::class.java))
+          startActivity(Intent(this, MainActivity::class.java))
           finish()
         }
         .addOnFailureListener { e ->

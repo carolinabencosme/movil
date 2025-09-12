@@ -52,10 +52,10 @@ class ChatAdapter(
 
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END
-            holder.messageText.setBackgroundResource(R.drawable.bg_bubble_me)
+            holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
         } else {
             holder.root.gravity = Gravity.START
-            holder.messageText.setBackgroundResource(R.drawable.bg_bubble_other)
+            holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
         }
     }*/
 
@@ -77,18 +77,18 @@ class ChatAdapter(
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END
             if (holder.messageText.visibility == View.VISIBLE) {
-                holder.messageText.setBackgroundResource(R.drawable.bg_bubble_me)
+                holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
             }
             if (holder.imageView.visibility == View.VISIBLE) {
-                holder.imageView.setBackgroundResource(R.drawable.bg_bubble_me)
+                holder.imageView.setBackgroundResource(R.drawable.bubble_outgoing)
             }
         } else {
             holder.root.gravity = Gravity.START
             if (holder.messageText.visibility == View.VISIBLE) {
-                holder.messageText.setBackgroundResource(R.drawable.bg_bubble_other)
+                holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
             }
             if (holder.imageView.visibility == View.VISIBLE) {
-                holder.imageView.setBackgroundResource(R.drawable.bg_bubble_other)
+                holder.imageView.setBackgroundResource(R.drawable.bubble_incoming)
             }
         }
 

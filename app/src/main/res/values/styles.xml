@@ -35,4 +35,26 @@
     </style>
 
     <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
+
+    <!-- State dot styles -->
+    <style name="StateDot">
+        <item name="android:layout_width">10dp</item>
+        <item name="android:layout_height">10dp</item>
+    </style>
+
+    <style name="StateDot.Success" parent="StateDot">
+        <item name="android:background">@drawable/online_indicator</item>
+    </style>
+
+    <style name="StateDot.Warning" parent="StateDot">
+        <item name="android:background">@drawable/warning_indicator</item>
+    </style>
+
+    <style name="StateDot.Error" parent="StateDot">
+        <item name="android:background">@drawable/offline_indicator</item>
+    </style>
+
+    <style name="StateDot.Info" parent="StateDot">
+        <item name="android:background">@drawable/info_indicator</item>
+    </style>
 </resources>

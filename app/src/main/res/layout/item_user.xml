@@ -26,10 +26,8 @@
 
             <View
                 android:id="@+id/viewStatus"
-                android:layout_width="10dp"
-                android:layout_height="10dp"
-                android:layout_gravity="bottom|end"
-                android:background="@drawable/offline_indicator" />
+                style="@style/StateDot.Error"
+                android:layout_gravity="bottom|end" />
         </FrameLayout>
 
         <LinearLayout

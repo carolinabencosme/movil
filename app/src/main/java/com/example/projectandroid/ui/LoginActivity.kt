@@ -11,7 +11,8 @@ import com.example.projectandroid.R
 import com.example.projectandroid.util.AppLogger
 import androidx.appcompat.widget.Toolbar
 import android.widget.Button
-import android.widget.EditText
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
@@ -34,8 +35,10 @@ class LoginActivity : AppCompatActivity() {
     setSupportActionBar(toolbar)
     supportActionBar?.title = getString(R.string.login_title)
 
-    val emailInput = findViewById<EditText>(R.id.editEmail)
-    val passwordInput = findViewById<EditText>(R.id.editPassword)
+    val emailLayout = findViewById<TextInputLayout>(R.id.emailLayout)
+    val emailInput = findViewById<TextInputEditText>(R.id.editEmail)
+    val passwordLayout = findViewById<TextInputLayout>(R.id.passwordLayout)
+    val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
     val loginButton = findViewById<Button>(R.id.buttonLogin)
     val registerButton = findViewById<Button>(R.id.buttonRegister)
     val progressBar = findViewById<ProgressBar>(R.id.progressBar)
@@ -44,13 +47,16 @@ class LoginActivity : AppCompatActivity() {
       val email = emailInput.text.toString().trim()
       val password = passwordInput.text.toString().trim()
 
+      emailLayout.error = null
+      passwordLayout.error = null
+
       var isValid = true
       if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
-        emailInput.error = getString(R.string.invalid_email)
+        emailLayout.error = getString(R.string.invalid_email)
         isValid = false
       }
       if (password.length < 6) {
-        passwordInput.error = getString(R.string.invalid_password)
+        passwordLayout.error = getString(R.string.invalid_password)
         isValid = false
       }
       if (!isValid) return@setOnClickListener

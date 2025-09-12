@@ -41,4 +41,25 @@
     <!-- Toolbar -->
     <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
 
+    <!-- Punto base -->
+    <style name="StateDot">
+        <item name="android:layout_width">8dp</item>
+        <item name="android:layout_height">8dp</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:layout_marginEnd">6dp</item>
+    </style>
+
+    <!-- Variante de error (la que te falta) -->
+    <style name="StateDot.Error" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_error</item>
+    </style>
+
+    <!-- (Opcional, por si el layout usa otras variantes) -->
+    <style name="StateDot.Online" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_online</item>
+    </style>
+    <style name="StateDot.Offline" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_offline</item>
+    </style>
+
 </resources>

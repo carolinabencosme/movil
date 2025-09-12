@@ -5,6 +5,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import com.example.projectandroid.R
 import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +36,21 @@ class MainActivity : AppCompatActivity() {
                 else -> false
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        setOnlineStatus(true)
+    }
+
+    override fun onStop() {
+        setOnlineStatus(false)
+        super.onStop()
+    }
+
+    private fun setOnlineStatus(online: Boolean) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        Firebase.firestore.collection("users").document(uid).update("isOnline", online)
     }
 
     private fun replaceFragment(fragment: Fragment) {

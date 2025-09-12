@@ -69,6 +69,7 @@ class RegisterActivity : AppCompatActivity() {
             uid = user.uid,
             displayName = name,
             photoUrl = user.photoUrl?.toString(),
+            isOnline = true,
           )
 
           Firebase.firestore.collection("users").document(user.uid).set(profile)

@@ -2,10 +2,9 @@
 <resources>
     <!-- Tema base (night) con Material 3 -->
     <style name="Base.Theme.ProjectAndroid" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Opcional: personaliza colores para modo oscuro -->
-        <!-- <item name="colorPrimary">@color/md_theme_dark_primary</item> -->
-        <!-- <item name="colorSecondary">@color/md_theme_dark_secondary</item> -->
-        <!-- <item name="colorOnPrimary">@android:color/white</item> -->
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
     </style>
 
     <!-- Alias del tema de la app (igual que en values/) -->

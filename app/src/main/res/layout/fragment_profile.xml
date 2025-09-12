@@ -137,7 +137,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonSave"
-                style="@style/AppButton"
+                style="@style/AppButton.Tonal"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -145,7 +145,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonLogout"
-                style="@style/AppButton"
+                style="@style/AppButton.Outlined"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"

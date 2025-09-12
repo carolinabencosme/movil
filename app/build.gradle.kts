@@ -61,6 +61,7 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
+    implementation("com.google.firebase:firebase-messaging")
     // Imágenes: Firebase Storage
     implementation("com.google.firebase:firebase-storage-ktx:21.0.0")
 

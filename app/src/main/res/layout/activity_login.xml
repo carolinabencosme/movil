@@ -45,8 +45,8 @@
                 android:layout_height="wrap_content"
                 android:hint="Email"
                 android:inputType="textEmailAddress"
-                android:textColor="@color/md_theme_light_onSecondaryContainer"
-                android:textColorHint="@color/md_theme_light_secondary" />
+                android:textColor="?attr/colorOnSecondaryContainer"
+                android:textColorHint="?attr/colorSecondary" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.textfield.TextInputLayout
@@ -66,8 +66,8 @@
                 android:layout_height="wrap_content"
                 android:hint="Password"
                 android:inputType="textPassword"
-                android:textColor="@color/md_theme_light_onSecondaryContainer"
-                android:textColorHint="@color/md_theme_light_secondary" />
+                android:textColor="?attr/colorOnSecondaryContainer"
+                android:textColorHint="?attr/colorSecondary" />
         </com.google.android.material.textfield.TextInputLayout>
 
         <com.google.android.material.button.MaterialButton

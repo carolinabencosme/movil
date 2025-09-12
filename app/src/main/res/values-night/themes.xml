@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Tema base (night) con Material Components -->
-    <style name="Base.Theme.ProjectAndroid" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <!-- Tema base (night) con Material 3 -->
+    <style name="Base.Theme.ProjectAndroid" parent="Theme.Material3.DayNight.NoActionBar">
         <!-- Opcional: personaliza colores para modo oscuro -->
         <!-- <item name="colorPrimary">@color/md_theme_dark_primary</item> -->
         <!-- <item name="colorSecondary">@color/md_theme_dark_secondary</item> -->

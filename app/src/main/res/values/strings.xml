@@ -5,6 +5,9 @@
     <string name="error_generic">Error</string>
     <string name="required_field">Campo requerido</string>
     <string name="logout">Cerrar sesión</string>
+    <string name="save">Guardar</string>
+    <string name="display_name">Nombre</string>
+    <string name="profile_photo">Foto de perfil</string>
     <string name="chats_title">Chats</string>
     <string name="error_invalid_user">Usuario no registrado</string>
     <string name="error_invalid_credentials">Credenciales incorrectas</string>

@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.ChatRoom
 import com.example.projectandroid.util.AppLogger
+import com.example.projectandroid.util.ErrorLogger
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
@@ -48,9 +49,16 @@ class ChatListFragment : Fragment() {
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
+            val uid = room.contactUid.takeUnless { it.isBlank() }
+            val name = room.contactName.takeUnless { it.isBlank() }
+            if (uid == null || name == null) {
+                val error = IllegalArgumentException("ChatRoom missing contactUid or contactName")
+                ErrorLogger.log(requireContext(), error)
+                return@ChatListAdapter
+            }
             val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                putExtra("recipientUid", room.contactUid)
-                putExtra("recipientName", room.contactName)
+                putExtra("recipientUid", uid)
+                putExtra("recipientName", name)
             }
             startActivity(intent)
         }

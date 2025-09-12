@@ -68,7 +68,7 @@ class ProfileFragment : Fragment() {
                     this.photoUri = photoUri
                 }
                 user.updateProfile(profileUpdates).addOnSuccessListener {
-                    val profile = User(uid = uid, displayName = name, photoUrl = photoUri?.toString())
+                    val profile = User(uid = uid, displayName = name, photoUrl = photoUri?.toString(), isOnline = true)
                     Firebase.firestore.collection("users").document(uid).set(profile)
                 }
             }

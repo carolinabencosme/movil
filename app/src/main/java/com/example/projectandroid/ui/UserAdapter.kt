@@ -16,6 +16,7 @@ class UserAdapter(
 
     class UserViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.textName)
+        val statusView: View = view.findViewById(R.id.viewStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): UserViewHolder {
@@ -27,6 +28,9 @@ class UserAdapter(
     override fun onBindViewHolder(holder: UserViewHolder, position: Int) {
         val user = getItem(position)
         holder.nameText.text = user.displayName
+        holder.statusView.setBackgroundResource(
+            if (user.isOnline) R.drawable.online_indicator else R.drawable.offline_indicator
+        )
         holder.itemView.setOnClickListener { onClick(user) }
     }
 

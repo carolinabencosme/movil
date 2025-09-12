@@ -9,6 +9,8 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.example.projectandroid.R
 import com.example.projectandroid.model.ChatRoom
+import com.google.firebase.firestore.ktx.firestore
+import com.google.firebase.ktx.Firebase
 
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
@@ -17,6 +19,7 @@ class ChatListAdapter(
     class ChatRoomViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.textName)
         val lastMessageText: TextView = view.findViewById(R.id.textLastMessage)
+        val statusView: View = view.findViewById(R.id.viewStatus)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
@@ -32,6 +35,12 @@ class ChatListAdapter(
             text = room.lastMessage
             visibility = View.VISIBLE
         }
+        holder.statusView.setBackgroundResource(R.drawable.offline_indicator)
+        Firebase.firestore.collection("users").document(room.contactUid).get()
+            .addOnSuccessListener { snapshot ->
+                val online = snapshot.getBoolean("isOnline") == true
+                holder.statusView.setBackgroundResource(if (online) R.drawable.online_indicator else R.drawable.offline_indicator)
+            }
         holder.itemView.setOnClickListener { onClick(room) }
     }
 

@@ -17,6 +17,8 @@
         app:layout_constraintTop_toTopOf="parent"
         app:title="@string/chats_title" />
 
+
+
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/searchLayout"
         android:layout_width="0dp"

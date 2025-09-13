@@ -3,27 +3,27 @@ package com.example.texty.ui
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.widget.Button
+import android.widget.EditText
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
 import com.example.texty.R
 import com.example.texty.model.Message
+import com.example.texty.repository.FriendRequestRepository
+import com.example.texty.util.AppLogger
+import com.example.texty.util.ErrorLogger
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-import com.example.texty.util.AppLogger
-import com.example.texty.util.ErrorLogger
-import com.google.firebase.firestore.SetOptions
 import com.google.firebase.storage.ktx.storage
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.button.MaterialButton
-import com.example.texty.repository.FriendRequestRepository
 
 class ChatActivity : AppCompatActivity() {
 
@@ -33,15 +33,26 @@ class ChatActivity : AppCompatActivity() {
   private lateinit var sendButton: Button
   private lateinit var listenerRegistration: ListenerRegistration
 
+  private var isGroup: Boolean = false
+  private var roomId: String? = null
+  private var recipientUid: String? = null
+  private var recipientName: String? = null
+  private var groupName: String? = null
+
   private val pickImageLauncher = registerForActivityResult(
     ActivityResultContracts.GetContent()
   ) { uri: Uri? ->
     val currentUser = Firebase.auth.currentUser ?: return@registerForActivityResult
-    val recipientUid = intent.getStringExtra("recipientUid") ?: return@registerForActivityResult
-    val recipientName = intent.getStringExtra("recipientName") ?: return@registerForActivityResult
-    val roomId = listOf(currentUser.uid, recipientUid).sorted().joinToString("_")
     if (uri != null) {
-      sendImageMessage(roomId, currentUser.uid, recipientUid, recipientName, uri)
+      if (isGroup) {
+        val id = roomId ?: return@registerForActivityResult
+        sendImageMessage(id, currentUser.uid, uri, true)
+      } else {
+        val recipientUid = recipientUid ?: return@registerForActivityResult
+        val recipientName = recipientName ?: return@registerForActivityResult
+        val id = listOf(currentUser.uid, recipientUid).sorted().joinToString("_")
+        sendImageMessage(id, currentUser.uid, uri, false, recipientUid, recipientName)
+      }
     }
   }
 
@@ -56,35 +67,50 @@ class ChatActivity : AppCompatActivity() {
       return
     }
 
-    val recipientUid = intent.getStringExtra("recipientUid").takeUnless { it.isNullOrBlank() } ?: run {
-      val error = IllegalArgumentException("recipientUid extra is missing or blank")
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
-      finish()
-      return
-    }
+    isGroup = intent.getBooleanExtra("isGroup", false)
 
-    val recipientName = intent.getStringExtra("recipientName").takeUnless { it.isNullOrBlank() } ?: run {
-      val error = IllegalArgumentException("recipientName extra is missing or blank")
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
-      finish()
-      return
-    }
-    FriendRequestRepository().areFriends(currentUser.uid, recipientUid) { isFriend ->
-      if (isFriend) {
-        initChat(currentUser.uid, recipientUid, recipientName)
-      } else {
-        Toast.makeText(this, R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+    if (isGroup) {
+      // Datos de grupo
+      roomId = intent.getStringExtra("roomId")
+      groupName = intent.getStringExtra("groupName")
+
+      if (roomId.isNullOrBlank()) {
+        val error = IllegalArgumentException("roomId extra is missing or blank")
+        AppLogger.logError(this, error)
+        ErrorLogger.log(this, error)
         finish()
+        return
+      }
+
+      initChat(currentUser.uid, null, groupName ?: "Grupo sin nombre", true)
+
+    } else {
+      // Datos de chat privado
+      recipientUid = intent.getStringExtra("recipientUid")
+      recipientName = intent.getStringExtra("recipientName")
+
+      if (recipientUid.isNullOrBlank() || recipientName.isNullOrBlank()) {
+        val error = IllegalArgumentException("recipientUid o recipientName extra faltante")
+        AppLogger.logError(this, error)
+        ErrorLogger.log(this, error)
+        finish()
+        return
+      }
+
+      FriendRequestRepository().areFriends(currentUser.uid, recipientUid!!) { isFriend ->
+        if (isFriend) {
+          initChat(currentUser.uid, recipientUid!!, recipientName!!, false)
+        } else {
+          Toast.makeText(this, R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+          finish()
+        }
       }
     }
   }
 
-  private fun initChat(currentUid: String, recipientUid: String, recipientName: String) {
+  private fun initChat(currentUid: String, recipientUid: String?, title: String, isGroup: Boolean) {
     setContentView(R.layout.activity_chat)
 
-    // Botón para enviar imagen (mergebranch)
     val sendImageButton = findViewById<MaterialButton>(R.id.buttonSendImage)
     sendImageButton.setOnClickListener {
       pickImageLauncher.launch("image/*")
@@ -93,7 +119,7 @@ class ChatActivity : AppCompatActivity() {
     val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
-    supportActionBar?.title = recipientName
+    supportActionBar?.title = title
 
     recyclerView = findViewById(R.id.recyclerView)
     messageInput = findViewById(R.id.editMessage)
@@ -105,10 +131,15 @@ class ChatActivity : AppCompatActivity() {
     }
     recyclerView.adapter = adapter
 
-    val roomId = listOf(currentUid, recipientUid).sorted().joinToString("_")
+    val id = if (isGroup) {
+      roomId!!
+    } else {
+      listOf(currentUid, recipientUid!!).sorted().joinToString("_")
+    }
+
     val ref = Firebase.firestore
       .collection("rooms")
-      .document(roomId)
+      .document(id)
       .collection("messages")
 
     listenerRegistration =
@@ -135,23 +166,29 @@ class ChatActivity : AppCompatActivity() {
         "createdAt" to FieldValue.serverTimestamp(),
       )
 
-      // Agregar el mensaje a Firestore (mergebranch)
       ref.add(data).addOnFailureListener { e ->
         AppLogger.logError(this, e)
         ErrorLogger.log(this, e)
       }
 
-      // Actualizar el resumen del chat (mergebranch)
-      val roomData = mapOf(
-        "participantIds" to listOf(currentUid, recipientUid),
-        "userNames" to mapOf(
-          currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
-          recipientUid to recipientName
-        ),
-        "lastMessage" to text,
-        "updatedAt" to FieldValue.serverTimestamp()
-      )
-      Firebase.firestore.collection("rooms").document(roomId)
+      val roomData = if (isGroup) {
+        mapOf(
+          "lastMessage" to text,
+          "updatedAt" to FieldValue.serverTimestamp()
+        )
+      } else {
+        mapOf(
+          "participantIds" to listOf(currentUid, recipientUid!!),
+          "userNames" to mapOf(
+            currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+            recipientUid to title
+          ),
+          "lastMessage" to text,
+          "updatedAt" to FieldValue.serverTimestamp()
+        )
+      }
+
+      Firebase.firestore.collection("rooms").document(id)
         .set(roomData, SetOptions.merge())
 
       messageInput.text?.clear()
@@ -173,9 +210,10 @@ class ChatActivity : AppCompatActivity() {
   private fun sendImageMessage(
     roomId: String,
     currentUid: String,
-    recipientUid: String,
-    recipientName: String,
-    imageUri: Uri
+    imageUri: Uri,
+    isGroup: Boolean,
+    recipientUid: String? = null,
+    recipientName: String? = null
   ) {
     val storageRef = Firebase.storage.reference
       .child("chat_images/$roomId/${System.currentTimeMillis()}.jpg")
@@ -195,15 +233,22 @@ class ChatActivity : AppCompatActivity() {
             .collection("messages")
             .add(data)
 
-          val roomData = mapOf(
-            "participantIds" to listOf(currentUid, recipientUid),
-            "userNames" to mapOf(
-              currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
-              recipientUid to recipientName
-            ),
-            "lastMessage" to "Imagen",
-            "updatedAt" to FieldValue.serverTimestamp()
-          )
+          val roomData = if (isGroup) {
+            mapOf(
+              "lastMessage" to "📷 Imagen",
+              "updatedAt" to FieldValue.serverTimestamp()
+            )
+          } else {
+            mapOf(
+              "participantIds" to listOf(currentUid, recipientUid!!),
+              "userNames" to mapOf(
+                currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+                recipientUid to recipientName
+              ),
+              "lastMessage" to "Imagen",
+              "updatedAt" to FieldValue.serverTimestamp()
+            )
+          }
 
           Firebase.firestore.collection("rooms").document(roomId)
             .set(roomData, SetOptions.merge())

@@ -24,7 +24,7 @@ class ChatListAdapter(
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
         val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_user, parent, false)
+            .inflate(R.layout.item_chat, parent, false)
         return ChatRoomViewHolder(view)
     }
 

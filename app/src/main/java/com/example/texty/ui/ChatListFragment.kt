@@ -8,6 +8,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.CheckBox
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -27,6 +28,7 @@ import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 import com.example.texty.repository.UserRepository;
+import com.google.firebase.firestore.ktx.firestore
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
@@ -43,7 +45,7 @@ class ChatListFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_chat_list, container, false)
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+   /* override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
         val currentUser = Firebase.auth.currentUser!!
@@ -130,6 +132,102 @@ class ChatListFragment : Fragment() {
         }
         viewModel.startListening(currentUser.uid)
     }
+*/
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val currentUser = Firebase.auth.currentUser!!
+        val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
+        (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
+
+        adapter = ChatListAdapter { room ->
+            if (room.isGroup) {
+                // 🔹 Abrir chat grupal
+                val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                    putExtra("roomId", room.id)
+                    putExtra("isGroup", true)
+                    putExtra("groupName", room.groupName ?: "Grupo sin nombre")
+                }
+                startActivity(intent)
+            } else {
+                // 🔹 Abrir chat privado
+                val otherUid = room.participantIds.firstOrNull { it != currentUser.uid }
+                val otherName = otherUid?.let { room.userNames[it] } ?: "Desconocido"
+
+                if (otherUid.isNullOrBlank()) {
+                    val error = IllegalArgumentException("ChatRoom privado sin participante válido")
+                    ErrorLogger.log(requireContext(), error)
+                    return@ChatListAdapter
+                }
+
+                val intent = Intent(requireContext(), ChatActivity::class.java).apply {
+                    putExtra("recipientUid", otherUid)
+                    putExtra("recipientName", otherName)
+                }
+                startActivity(intent)
+            }
+        }
+
+        val recycler = view.findViewById<RecyclerView>(R.id.recyclerChats)
+        val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
+        val placeholder = view.findViewById<TextView>(R.id.textPlaceholder)
+
+        recycler.layoutManager = LinearLayoutManager(requireContext())
+        recycler.adapter = adapter
+        recycler.addItemDecoration(DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL))
+
+        searchInput = view.findViewById<TextInputEditText>(R.id.editSearch)
+        searchInput.addTextChangedListener { text ->
+            filterRooms(text?.toString() ?: "")
+        }
+
+        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
+            progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
+        }
+
+        viewModel.rooms.observe(viewLifecycleOwner) { list ->
+            val uid = Firebase.auth.currentUser!!.uid
+
+            // Traer también la lista de amigos
+            UserRepository().getFriends(uid, onSuccess = { friends ->
+                // 🔹 Crear ChatRoom “virtual” para cada amigo
+                val friendRooms = friends.map { user ->
+                    ChatRoom(
+                        id = user.uid, // si no hay room aún, usamos el uid como id temporal
+                        participantIds = listOf(uid, user.uid),
+                        userNames = mapOf(
+                            uid to (Firebase.auth.currentUser?.displayName ?: "Yo"),
+                            user.uid to user.displayName
+                        ),
+                        isGroup = false,
+                        lastMessage = ""
+                    )
+                }
+
+                // 🔹 Combinar rooms reales (list) con amigos
+                val combined = (list + friendRooms).distinctBy { room ->
+                    if (room.isGroup) room.id else room.participantIds.sorted().joinToString("_")
+                }
+
+                allRooms = combined
+
+                if (allRooms.isEmpty()) {
+                    placeholder.visibility = View.VISIBLE
+                    recycler.visibility = View.GONE
+                } else {
+                    placeholder.visibility = View.GONE
+                    recycler.visibility = View.VISIBLE
+                    filterRooms(searchInput.text?.toString() ?: "")
+                }
+            }, onFailure = { e ->
+                AppLogger.logError(requireContext(), e)
+            })
+        }
+
+        viewModel.startListening(currentUser.uid)
+    }
+
 
     override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
         inflater.inflate(R.menu.menu_chat_list, menu)
@@ -137,6 +235,10 @@ class ChatListFragment : Fragment() {
 
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
+            R.id.action_create_group -> {
+                openCreateGroupDialog()
+                true
+            }
             R.id.action_logout -> {
                 FirebaseAuth.getInstance().signOut()
                 val intent = Intent(requireContext(), LoginActivity::class.java)
@@ -153,12 +255,130 @@ class ChatListFragment : Fragment() {
         }
     }
 
-    private fun filterRooms(query: String) {
+   /* private fun filterRooms(query: String) {
         if (query.isBlank()) {
             adapter.submitList(allRooms)
         } else {
             val lower = query.lowercase(Locale.getDefault())
             adapter.submitList(allRooms.filter { it.contactName.lowercase(Locale.getDefault()).contains(lower) })
         }
+    }*/
+
+    private fun filterRooms(query: String) {
+        if (query.isBlank()) {
+            adapter.submitList(allRooms)
+        } else {
+            val lower = query.lowercase(Locale.getDefault())
+
+            val filtered = allRooms.filter { room ->
+                if (room.isGroup) {
+                    room.groupName?.lowercase(Locale.getDefault())?.contains(lower) == true
+                } else {
+                    val currentUid = Firebase.auth.currentUser?.uid
+                    val otherUid = room.participantIds.firstOrNull { it != currentUid }
+                    val otherName = otherUid?.let { room.userNames[it] }
+                    otherName?.lowercase(Locale.getDefault())?.contains(lower) == true
+                }
+            }
+
+            adapter.submitList(filtered)
+        }
     }
+
+    private fun openCreateGroupDialog() {
+        val context = requireContext()
+        val uid = Firebase.auth.currentUser?.uid ?: return
+
+        // 1. Layout dinámico para el diálogo
+        val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_create_group, null)
+        val recycler = dialogView.findViewById<RecyclerView>(R.id.recyclerFriends)
+        val editGroupName = dialogView.findViewById<TextInputEditText>(R.id.editGroupName)
+
+        recycler.layoutManager = LinearLayoutManager(context)
+
+        // 2. Cargar amigos desde UserRepository
+        UserRepository().getFriends(uid, onSuccess = { friends ->
+
+            // Adaptador simple con checkbox
+            val selectedFriends = mutableSetOf<String>()
+            recycler.adapter = object : RecyclerView.Adapter<FriendVH>() {
+                override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FriendVH {
+                    val v = LayoutInflater.from(parent.context)
+                        .inflate(R.layout.item_friend_checkbox, parent, false)
+                    return FriendVH(v)
+                }
+
+
+                override fun getItemCount() = friends.size
+
+                override fun onBindViewHolder(holder: FriendVH, position: Int) {
+                    val friend = friends[position]
+                    holder.checkBox.text = friend.displayName
+                    holder.checkBox.isChecked = selectedFriends.contains(friend.uid)
+
+                    holder.checkBox.setOnCheckedChangeListener { _, checked ->
+                        if (checked) selectedFriends.add(friend.uid)
+                        else selectedFriends.remove(friend.uid)
+                    }
+                }
+
+            }
+
+            // 3. Mostrar diálogo
+            val dialog = androidx.appcompat.app.AlertDialog.Builder(context)
+                .setTitle("Nuevo grupo")
+                .setView(dialogView)
+                .setPositiveButton("Crear") { d, _ ->
+                    val groupName = editGroupName.text?.toString()?.trim().orEmpty()
+                    if (groupName.isBlank() || selectedFriends.isEmpty()) {
+                        AppLogger.logError(context, Exception("Falta nombre o miembros"))
+                        return@setPositiveButton
+                    }
+
+                    // Construir ChatRoom
+                    val participantIds = selectedFriends.toMutableList().apply { add(uid) }
+                    val userNames = friends.associate { it.uid to it.displayName }
+                        .toMutableMap().apply {
+                            this[uid] = Firebase.auth.currentUser?.displayName ?: "Yo"
+                        }
+
+                    val roomData = mapOf(
+                        "participantIds" to participantIds,
+                        "userNames" to userNames,
+                        "isGroup" to true,
+                        "groupName" to groupName,
+                        "lastMessage" to "",
+                        "updatedAt" to com.google.firebase.Timestamp.now()
+                    )
+
+                    Firebase.firestore.collection("rooms").add(roomData)
+                        .addOnSuccessListener {
+                            AppLogger.logInfo(context.toString(), "Grupo creado correctamente")
+                        }
+                        .addOnFailureListener { e ->
+                            AppLogger.logError(context, e)
+                        }
+
+                    d.dismiss()
+                }
+                .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
+                .create()
+
+            dialog.show()
+
+        }, onFailure = { e ->
+            AppLogger.logError(context, e)
+        })
+    }
+
+    // ViewHolder para amigos
+    private class FriendVH(view: View) : RecyclerView.ViewHolder(view) {
+        val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
+    }
+
+
+
+
+
+
 }

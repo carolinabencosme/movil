@@ -33,7 +33,7 @@ class ChatListViewModel : ViewModel() {
                     _error.value = e
                     return@addSnapshotListener
                 }
-                val list = value?.documents?.mapNotNull { doc ->
+                /*val list = value?.documents?.mapNotNull { doc ->
                     val participantIds = doc.get("participantIds") as? List<*>
                     val otherUid = participantIds?.firstOrNull { it != currentUserUid } as? String
                     val userNames = doc.get("userNames") as? Map<*, *>
@@ -48,7 +48,43 @@ class ChatListViewModel : ViewModel() {
                         lastMessage = lastMessage,
                         updatedAt = updatedAt,
                     )
+                } ?: emptyList()*/
+
+                val list = value?.documents?.mapNotNull { doc ->
+                    val participantIds = doc.get("participantIds") as? List<String> ?: emptyList()
+                    val userNames = doc.get("userNames") as? Map<String, String> ?: emptyMap()
+                    val isGroup = doc.getBoolean("isGroup") ?: false
+                    val groupName = doc.getString("groupName")
+                    val lastMessage = doc.getString("lastMessage") ?: ""
+                    val updatedAt = doc.getTimestamp("updatedAt") ?: com.google.firebase.Timestamp.now()
+
+                    if (isGroup) {
+                        // Es un grupo
+                        ChatRoom(
+                            id = doc.id,
+                            participantIds = participantIds,
+                            userNames = userNames,
+                            isGroup = true,
+                            groupName = groupName,
+                            lastMessage = lastMessage,
+                            updatedAt = updatedAt
+                        )
+                    } else {
+                        // Es chat individual
+                        val otherUid = participantIds.firstOrNull { it != currentUserUid }
+                        if (otherUid == null) null else ChatRoom(
+                            id = doc.id,
+                            participantIds = participantIds,
+                            userNames = userNames,
+                            isGroup = false,
+                            groupName = null,
+                            lastMessage = lastMessage,
+                            updatedAt = updatedAt
+                        )
+                    }
                 } ?: emptyList()
+
+
                 _rooms.value = list
             }
     }

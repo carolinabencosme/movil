@@ -17,6 +17,7 @@ import com.example.texty.util.AppLogger
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.ktx.auth
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 class FriendRequestsFragment : Fragment() {
@@ -88,7 +89,13 @@ class FriendRequestsFragment : Fragment() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             val request = getItem(position)
-            holder.nameText.text = request.fromUid
+            //holder.nameText.text = request.fromUid
+            Firebase.firestore.collection("users").document(request.fromUid)
+                .get()
+                .addOnSuccessListener { snap ->
+                    val displayName = snap.getString("displayName") ?: request.fromUid
+                    holder.nameText.text = displayName
+                }
             holder.acceptButton.setOnClickListener { onAccept(request) }
             holder.rejectButton.setOnClickListener { onReject(request) }
         }

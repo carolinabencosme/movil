@@ -26,6 +26,7 @@ import androidx.core.widget.addTextChangedListener
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
+import com.example.texty.repository.UserRepository;
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
@@ -81,6 +82,38 @@ class ChatListFragment : Fragment() {
             progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
         }
         viewModel.rooms.observe(viewLifecycleOwner) { list ->
+            val uid = Firebase.auth.currentUser!!.uid
+
+            // Traer también la lista de amigos
+            UserRepository().getFriends(uid, onSuccess = { friends ->
+                // Crear ChatRoom "vacío" si no existe conversación aún
+                val friendRooms = friends.map { user ->
+                    ChatRoom(
+                        id = user.uid, // puedes usar algo como "${uid}_${user.uid}" si prefieres
+                        contactUid = user.uid,
+                        contactName = user.displayName,
+                        lastMessage = "" // vacío porque aún no hay chat
+                    )
+                }
+
+                // Combinar rooms existentes con los amigos
+                val combined = (list + friendRooms).distinctBy { it.contactUid }
+                allRooms = combined
+
+                if (allRooms.isEmpty()) {
+                    view?.findViewById<TextView>(R.id.textPlaceholder)?.visibility = View.VISIBLE
+                    view?.findViewById<RecyclerView>(R.id.recyclerChats)?.visibility = View.GONE
+                } else {
+                    view?.findViewById<TextView>(R.id.textPlaceholder)?.visibility = View.GONE
+                    view?.findViewById<RecyclerView>(R.id.recyclerChats)?.visibility = View.VISIBLE
+                    filterRooms(searchInput.text?.toString() ?: "")
+                }
+            }, onFailure = { e ->
+                AppLogger.logError(requireContext(), e)
+            })
+        }
+
+        /*viewModel.rooms.observe(viewLifecycleOwner) { list ->
             allRooms = list
             if (list.isEmpty()) {
                 placeholder.visibility = View.VISIBLE
@@ -90,7 +123,8 @@ class ChatListFragment : Fragment() {
                 recycler.visibility = View.VISIBLE
                 filterRooms(searchInput.text?.toString() ?: "")
             }
-        }
+        }*/
+
         viewModel.error.observe(viewLifecycleOwner) { e ->
             e?.let { AppLogger.logError(requireContext(), it) }
         }

@@ -36,4 +36,26 @@ class UserRepository(private val firestore: FirebaseFirestore = Firebase.firesto
                 onFailure(exception)
             }
     }
+
+    fun getFriends(uid: String, onSuccess: (List<User>) -> Unit, onFailure: (Exception) -> Unit) {
+        Firebase.firestore.collection("users").document(uid).get()
+            .addOnSuccessListener { snapshot ->
+                val friendIds = snapshot.get("friends") as? List<String> ?: emptyList()
+                if (friendIds.isEmpty()) {
+                    onSuccess(emptyList())
+                    return@addOnSuccessListener
+                }
+
+                Firebase.firestore.collection("users")
+                    .whereIn("uid", friendIds)
+                    .get()
+                    .addOnSuccessListener { result ->
+                        val users = result.toObjects(User::class.java)
+                        onSuccess(users)
+                    }
+                    .addOnFailureListener(onFailure)
+            }
+            .addOnFailureListener(onFailure)
+    }
+
 }

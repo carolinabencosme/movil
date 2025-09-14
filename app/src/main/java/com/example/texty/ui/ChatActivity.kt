@@ -178,18 +178,13 @@ class ChatActivity : AppCompatActivity() {
       val text = messageInput.text.toString().trim()
       if (text.isEmpty()) return@setOnClickListener
 
-      val data = mapOf(
+      val messageData = mapOf(
         "senderId" to currentUid,
         "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
         "readBy" to listOf(currentUid)
       )
-
-      ref.add(data).addOnFailureListener { e ->
-        AppLogger.logError(this, e)
-        ErrorLogger.log(this, e)
-      }
 
       val roomData = if (isGroup) {
         mapOf(
@@ -208,10 +203,20 @@ class ChatActivity : AppCompatActivity() {
         )
       }
 
-      Firebase.firestore.collection("rooms").document(id)
-        .set(roomData, SetOptions.merge())
-
-      messageInput.text?.clear()
+      val roomRef = Firebase.firestore.collection("rooms").document(id)
+      roomRef.set(roomData, SetOptions.merge())
+        .addOnSuccessListener {
+          ref.add(messageData)
+            .addOnSuccessListener { messageInput.text?.clear() }
+            .addOnFailureListener { e ->
+              AppLogger.logError(this, e)
+              ErrorLogger.log(this, e)
+            }
+        }
+        .addOnFailureListener { e ->
+          AppLogger.logError(this, e)
+          ErrorLogger.log(this, e)
+        }
     }
   }
 
@@ -241,18 +246,13 @@ class ChatActivity : AppCompatActivity() {
     storageRef.putFile(imageUri)
       .addOnSuccessListener {
         storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-          val data = mapOf(
+          val messageData = mapOf(
             "senderId" to currentUid,
             "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
             "imageUrl" to downloadUrl.toString(),
             "createdAt" to FieldValue.serverTimestamp(),
             "readBy" to listOf(currentUid)
           )
-
-          Firebase.firestore.collection("rooms")
-            .document(roomId)
-            .collection("messages")
-            .add(data)
 
           val roomData = if (isGroup) {
             mapOf(
@@ -271,8 +271,14 @@ class ChatActivity : AppCompatActivity() {
             )
           }
 
-          Firebase.firestore.collection("rooms").document(roomId)
-            .set(roomData, SetOptions.merge())
+          val roomRef = Firebase.firestore.collection("rooms").document(roomId)
+          roomRef.set(roomData, SetOptions.merge())
+            .addOnSuccessListener {
+              roomRef.collection("messages")
+                .add(messageData)
+                .addOnFailureListener { e -> ErrorLogger.log(this, e) }
+            }
+            .addOnFailureListener { e -> ErrorLogger.log(this, e) }
         }
       }
       .addOnFailureListener { e -> ErrorLogger.log(this, e) }

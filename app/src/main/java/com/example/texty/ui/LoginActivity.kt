@@ -18,6 +18,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import com.example.texty.util.FcmTokenManager
 
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +71,7 @@ class LoginActivity : AppCompatActivity() {
           loginButton.isEnabled = true
         }
         .addOnSuccessListener {
+          FcmTokenManager.refreshTokenWithRetry()
           startActivity(Intent(this, MainActivity::class.java))
           finish()
         }

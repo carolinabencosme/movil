@@ -12,13 +12,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.example.texty.ui.MainActivity // TODO: cambia a tu ChatActivity si aplica
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
+import com.example.texty.util.FcmTokenManager
 
 class MessagingService : FirebaseMessagingService() {
 
@@ -80,18 +76,7 @@ class MessagingService : FirebaseMessagingService() {
 
   override fun onNewToken(token: String) {
     super.onNewToken(token)
-    val currentUser = Firebase.auth.currentUser ?: return
-
-    // Guardamos como ARRAY por si el usuario usa múltiples dispositivos
-    Firebase.firestore.collection("users")
-      .document(currentUser.uid)
-      .set(
-        mapOf("fcmTokens" to FieldValue.arrayUnion(token)),
-        SetOptions.merge()
-      )
-      .addOnFailureListener { e ->
-        Log.w(TAG, "Error guardando token FCM", e)
-      }
+    FcmTokenManager.sendTokenToFirestore(token)
   }
 
   // --- Helpers ---

@@ -30,4 +30,7 @@
     <string name="privacy">Privacidad</string>
     <string name="private_account">Cuenta privada</string>
     <string name="error_not_friends">Debes ser amigo para chatear</string>
+    <string name="notifications_permission_denied_title">Permiso de notificaciones</string>
+    <string name="notifications_permission_denied_message">Sin este permiso no podremos avisarte de nuevos mensajes. Puedes habilitarlo en ajustes.</string>
+    <string name="open_settings">Abrir ajustes</string>
 </resources>

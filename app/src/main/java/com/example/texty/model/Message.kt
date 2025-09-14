@@ -9,5 +9,6 @@ data class Message(
     val text: String = "",
     //val createdAt: Timestamp = Timestamp.now()
     val createdAt: Timestamp? = null,
-    val imageUrl: String? = null
+    val imageUrl: String? = null,
+    val readBy: List<String> = emptyList()
 )

@@ -15,16 +15,17 @@ exports.sendMessageNotification = functions.firestore
     }
 
     const userDoc = await admin.firestore().collection('users').doc(recipientId).get();
-    const token = userDoc.data()?.fcmToken;
-    if (!token) {
+    const tokens = userDoc.data()?.fcmTokens || [];
+    if (tokens.length === 0) {
       return null;
     }
 
-    return admin.messaging().send({
-      token,
+    return admin.messaging().sendEachForMulticast({
+      tokens,
       notification: {
         title: message.senderName || 'Nuevo mensaje',
         body: message.text || '',
       },
+      android: { priority: 'high' },
     });
   });

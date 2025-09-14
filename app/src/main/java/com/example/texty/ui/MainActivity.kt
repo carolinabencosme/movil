@@ -1,8 +1,13 @@
 package com.example.texty.ui
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.texty.R
 import com.google.android.material.bottomnavigation.BottomNavigationView
@@ -17,6 +22,13 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "MainActivity"
     }
+
+    private val requestNotificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (isGranted) {
+                sendFcmToken()
+            }
+        }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -52,7 +64,7 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         setOnlineStatus(true)
-        sendFcmToken()
+        requestNotificationPermission()
     }
 
     override fun onStop() {
@@ -63,6 +75,24 @@ class MainActivity : AppCompatActivity() {
     private fun setOnlineStatus(online: Boolean) {
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
         Firebase.firestore.collection("users").document(uid).update("isOnline", online)
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    sendFcmToken()
+                }
+                else -> {
+                    requestNotificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+            }
+        } else {
+            sendFcmToken()
+        }
     }
 
     private fun sendFcmToken() {

@@ -57,6 +57,8 @@ class ChatListViewModel : ViewModel() {
                     val groupName = doc.getString("groupName")
                     val lastMessage = doc.getString("lastMessage") ?: ""
                     val updatedAt = doc.getTimestamp("updatedAt") ?: com.google.firebase.Timestamp.now()
+                    val unreadCountsLong = doc.get("unreadCounts") as? Map<String, Long> ?: emptyMap()
+                    val unreadCounts = unreadCountsLong.mapValues { it.value.toInt() }
 
                     if (isGroup) {
                         // Es un grupo
@@ -67,7 +69,8 @@ class ChatListViewModel : ViewModel() {
                             isGroup = true,
                             groupName = groupName,
                             lastMessage = lastMessage,
-                            updatedAt = updatedAt
+                            updatedAt = updatedAt,
+                            unreadCounts = unreadCounts
                         )
                     } else {
                         // Es chat individual
@@ -79,7 +82,8 @@ class ChatListViewModel : ViewModel() {
                             isGroup = false,
                             groupName = null,
                             lastMessage = lastMessage,
-                            updatedAt = updatedAt
+                            updatedAt = updatedAt,
+                            unreadCounts = unreadCounts
                         )
                     }
                 } ?: emptyList()

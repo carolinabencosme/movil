@@ -142,17 +142,36 @@ class ChatActivity : AppCompatActivity() {
       .document(id)
       .collection("messages")
 
+    // Reset unread count when entering the chat
+    Firebase.firestore.collection("rooms").document(id)
+      .update("unreadCounts.$currentUid", 0)
+
     listenerRegistration =
       ref.orderBy("createdAt").addSnapshotListener { value, error ->
         if (error != null) {
           AppLogger.logError(this, error)
           return@addSnapshotListener
         }
-        val messages = value?.documents?.mapNotNull { doc ->
+        val documents = value?.documents ?: return@addSnapshotListener
+        val messages = documents.mapNotNull { doc ->
           doc.toObject(Message::class.java)?.copy(id = doc.id)
-        } ?: return@addSnapshotListener
+        }
         adapter.submitList(messages)
         if (adapter.itemCount > 0) recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
+
+        val unreadDocs = documents.filter { doc ->
+          val readBy = doc.get("readBy") as? List<*> ?: emptyList<Any>()
+          !readBy.contains(currentUid)
+        }
+        if (unreadDocs.isNotEmpty()) {
+          val batch = Firebase.firestore.batch()
+          unreadDocs.forEach { d ->
+            batch.update(d.reference, "readBy", FieldValue.arrayUnion(currentUid))
+          }
+          val roomRef = Firebase.firestore.collection("rooms").document(id)
+          batch.update(roomRef, mapOf("unreadCounts.$currentUid" to 0))
+          batch.commit()
+        }
       }
 
     sendButton.setOnClickListener {
@@ -164,6 +183,7 @@ class ChatActivity : AppCompatActivity() {
         "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
         "text" to text,
         "createdAt" to FieldValue.serverTimestamp(),
+        "readBy" to listOf(currentUid)
       )
 
       ref.add(data).addOnFailureListener { e ->
@@ -225,7 +245,8 @@ class ChatActivity : AppCompatActivity() {
             "senderId" to currentUid,
             "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
             "imageUrl" to downloadUrl.toString(),
-            "createdAt" to FieldValue.serverTimestamp()
+            "createdAt" to FieldValue.serverTimestamp(),
+            "readBy" to listOf(currentUid)
           )
 
           Firebase.firestore.collection("rooms")

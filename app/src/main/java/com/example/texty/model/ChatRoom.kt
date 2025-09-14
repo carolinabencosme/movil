@@ -20,5 +20,6 @@ data class ChatRoom(
     val isGroup: Boolean = false,
     val groupName: String? = null,
     val lastMessage: String = "",
-    val updatedAt: Timestamp? = null
+    val updatedAt: Timestamp? = null,
+    val unreadCounts: Map<String, Int> = emptyMap()
 )

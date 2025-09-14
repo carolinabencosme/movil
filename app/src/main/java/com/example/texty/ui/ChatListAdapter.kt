@@ -21,6 +21,7 @@ class ChatListAdapter(
         val nameText: TextView = view.findViewById(R.id.textName)
         val lastMessageText: TextView = view.findViewById(R.id.textLastMessage)
         val statusView: View = view.findViewById(R.id.viewStatus)
+        val unreadCountText: TextView = view.findViewById(R.id.textUnreadCount)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
@@ -45,6 +46,14 @@ class ChatListAdapter(
         holder.lastMessageText.apply {
             text = room.lastMessage
             visibility = View.VISIBLE
+        }
+
+        // Unread count
+        val currentUid = Firebase.auth.currentUser?.uid
+        val count = currentUid?.let { room.unreadCounts[it] } ?: 0
+        holder.unreadCountText.apply {
+            text = count.toString()
+            visibility = if (count > 0) View.VISIBLE else View.GONE
         }
 
         // Estado online SOLO en chats individuales

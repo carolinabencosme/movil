@@ -11,4 +11,5 @@ data class User(
     val about: String = "",
     val phone: String = "",
     val friends: List<String> = emptyList(),
+    val fcmTokens: List<String> = emptyList(),
 )

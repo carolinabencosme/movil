@@ -1,20 +1,65 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+
+    <!-- Text field base style -->
     <style name="AppEditText" parent="Widget.AppCompat.EditText">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:textColor">@color/md_theme_light_onSecondaryContainer</item>
-        <item name="android:textColorHint">@color/md_theme_light_secondary</item>
+        <item name="android:backgroundTint">?attr/colorSurfaceVariant</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textColorHint">?attr/colorTertiary</item>
     </style>
 
-    <style name="AppButton" parent="Widget.AppCompat.Button">
+    <!-- Material 3 Buttons -->
+    <style name="AppButton" parent="Widget.Material3.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
         <item name="android:padding">16dp</item>
-        <item name="android:backgroundTint">?attr/colorPrimary</item>
-        <item name="android:textColor">@android:color/white</item>
+        <!-- Use the theme token for M3 shape -->
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
+
+    <style name="AppButton.Tonal" parent="Widget.Material3.Button.TonalButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
+    </style>
+
+    <style name="AppButton.Outlined" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="android:padding">16dp</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
+    </style>
+
+    <!-- Toolbar -->
+    <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
+
+    <!-- Punto base -->
+    <style name="StateDot">
+        <item name="android:layout_width">8dp</item>
+        <item name="android:layout_height">8dp</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:layout_marginEnd">6dp</item>
+    </style>
+
+    <!-- Variante de error (la que te falta) -->
+    <style name="StateDot.Error" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_error</item>
+    </style>
+
+    <!-- (Opcional, por si el layout usa otras variantes) -->
+    <style name="StateDot.Online" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_online</item>
+    </style>
+    <style name="StateDot.Offline" parent="StateDot">
+        <item name="android:background">@drawable/state_dot_offline</item>
+    </style>
+
 </resources>

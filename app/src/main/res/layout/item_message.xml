@@ -4,7 +4,8 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="8dp">
+    android:padding="8dp"
+    android:gravity="start">
 
     <TextView
         android:id="@+id/textMessage"
@@ -12,7 +13,8 @@
         android:layout_height="wrap_content"
         android:padding="8dp"
         android:textColor="@android:color/black"
-        android:background="@drawable/bg_bubble_other" />
+        android:background="@drawable/bubble_incoming"
+        android:foreground="?attr/selectableItemBackgroundBorderless" />
 
     <ImageView
             android:id="@+id/imageMessage"
@@ -21,7 +23,9 @@
             android:scaleType="centerCrop"
             android:adjustViewBounds="true"
             android:layout_marginTop="4dp"
-            android:visibility="gone" />
+            android:visibility="gone"
+            android:background="@drawable/bubble_incoming"
+            android:foreground="?attr/selectableItemBackgroundBorderless" />
 
 
     <TextView

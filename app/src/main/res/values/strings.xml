@@ -1,10 +1,13 @@
 <resources>
-    <string name="app_name">projectAndroid</string>
+    <string name="app_name">Texty</string>
     <string name="invalid_email">Email inválido</string>
     <string name="invalid_password">La contraseña debe tener al menos 6 caracteres</string>
     <string name="error_generic">Error</string>
     <string name="required_field">Campo requerido</string>
     <string name="logout">Cerrar sesión</string>
+    <string name="save">Guardar</string>
+    <string name="display_name">Nombre</string>
+    <string name="profile_photo">Foto de perfil</string>
     <string name="chats_title">Chats</string>
     <string name="error_invalid_user">Usuario no registrado</string>
     <string name="error_invalid_credentials">Credenciales incorrectas</string>
@@ -15,4 +18,16 @@
     <string name="login_title">Iniciar sesión</string>
     <string name="register_title">Registro</string>
     <string name="search_user_title">Buscar usuario</string>
+    <string name="search_hint">Buscar</string>
+    <string name="profile_title">Perfil</string>
+    <string name="edit">Editar</string>
+    <string name="profile_about">Acerca de</string>
+    <string name="profile_phone">Teléfono</string>
+    <string name="change_password">Cambiar contraseña</string>
+    <string name="password_reset_email_sent">Correo de restablecimiento enviado</string>
+    <string name="notifications">Notificaciones</string>
+    <string name="enable_notifications">Recibir notificaciones</string>
+    <string name="privacy">Privacidad</string>
+    <string name="private_account">Cuenta privada</string>
+    <string name="error_not_friends">Debes ser amigo para chatear</string>
 </resources>

@@ -1,6 +1,18 @@
-<resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
-    <style name="Base.Theme.ProjectAndroid" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your dark theme here. -->
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tema base (night) con Material 3 -->
+    <style name="Base.Theme.Texty" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/md_theme_light_primary</item>
+        <item name="colorSecondary">@color/md_theme_light_secondary</item>
+        <item name="colorTertiary">@color/md_theme_light_tertiary</item>
+        <item name="colorSurface">@color/md_theme_light_surface</item>
+        <item name="colorSurfaceVariant">@color/md_theme_light_surfaceVariant</item>
+        <item name="colorOnSurface">@color/md_theme_light_onSurface</item>
+        <item name="colorOnSurfaceVariant">@color/md_theme_light_onSurfaceVariant</item>
+        <item name="colorError">@color/md_theme_light_error</item>
+        <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
     </style>
+
+    <!-- Alias del tema de la app (igual que en values/) -->
+    <style name="Theme.Texty" parent="Base.Theme.Texty" />
 </resources>

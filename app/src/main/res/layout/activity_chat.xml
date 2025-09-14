@@ -12,9 +12,10 @@
 
         <com.google.android.material.appbar.MaterialToolbar
             android:id="@+id/topAppBar"
+            style="@style/AppToolbar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="?attr/colorPrimary"
+            android:background="@drawable/bg_gradient_primary"
             android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
     </com.google.android.material.appbar.AppBarLayout>
 
@@ -31,11 +32,20 @@
         android:padding="8dp">
 
         <!-- Botón para seleccionar imagen -->
-        <com.google.android.material.button.MaterialButton
+        <!-- <com.google.android.material.button.MaterialButton
             android:id="@+id/buttonSendImage"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="📷" />
+            android:text="📷" /> -->
+
+        <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonSendImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/baseline_add_photo_alternate_24"
+                app:iconGravity="textStart"
+                android:text="" />
+
 
         <!-- Campo de texto con TextInputLayout -->
         <com.google.android.material.textfield.TextInputLayout
@@ -59,6 +69,7 @@
             android:id="@+id/buttonSend"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:background="@drawable/bg_gradient_primary"
             android:text="Enviar"
             app:icon="@drawable/ic_send"
             app:iconGravity="textStart"

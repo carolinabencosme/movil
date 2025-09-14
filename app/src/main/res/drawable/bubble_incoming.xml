@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+       android:shape="rectangle">
+
+    <!-- Usa el color de superficie variante de M3 -->
+    <solid android:color="?attr/colorSurfaceVariant" />
+
+    <!-- Esquinas: “cola” a la izquierda (bottomStart = 0dp) -->
+    <corners
+            android:topLeftRadius="16dp"
+            android:topRightRadius="16dp"
+            android:bottomLeftRadius="0dp"
+            android:bottomRightRadius="16dp" />
+
+    <!-- Un poco de padding para que el texto respire -->
+    <padding
+            android:left="12dp"
+            android:top="8dp"
+            android:right="12dp"
+            android:bottom="8dp" />
+</shape>

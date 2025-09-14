@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+            android:id="@+id/action_create_group"
+            android:title="Nuevo grupo"
+            android:icon="@drawable/baseline_add_reaction_24"
+            app:showAsAction="ifRoom" />
+
     <item
         android:id="@+id/action_logout"
         android:title="@string/logout"

@@ -293,38 +293,56 @@ class ChatListFragment : Fragment() {
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_create_group, null)
         val recycler = dialogView.findViewById<RecyclerView>(R.id.recyclerFriends)
         val editGroupName = dialogView.findViewById<TextInputEditText>(R.id.editGroupName)
+        val searchInput = dialogView.findViewById<TextInputEditText>(R.id.editSearchFriends)
 
         recycler.layoutManager = LinearLayoutManager(context)
 
         // 2. Cargar amigos desde UserRepository
         UserRepository().getFriends(uid, onSuccess = { friends ->
 
-            // Adaptador simple con checkbox
             val selectedFriends = mutableSetOf<String>()
-            recycler.adapter = object : RecyclerView.Adapter<FriendVH>() {
+
+            // Adaptador con filtro
+            val adapter = object : RecyclerView.Adapter<FriendVH>() {
+                private var filteredFriends = friends.toList()
+
                 override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FriendVH {
                     val v = LayoutInflater.from(parent.context)
                         .inflate(R.layout.item_friend_checkbox, parent, false)
                     return FriendVH(v)
                 }
 
-
-                override fun getItemCount() = friends.size
+                override fun getItemCount() = filteredFriends.size
 
                 override fun onBindViewHolder(holder: FriendVH, position: Int) {
-                    val friend = friends[position]
+                    val friend = filteredFriends[position]
                     holder.checkBox.text = friend.displayName
                     holder.checkBox.isChecked = selectedFriends.contains(friend.uid)
 
-                    holder.checkBox.setOnCheckedChangeListener { _, checked ->
-                        if (checked) selectedFriends.add(friend.uid)
+                    holder.checkBox.setOnClickListener {
+                        if (holder.checkBox.isChecked) selectedFriends.add(friend.uid)
                         else selectedFriends.remove(friend.uid)
                     }
                 }
 
+                fun filter(query: String) {
+                    filteredFriends = if (query.isBlank()) {
+                        friends
+                    } else {
+                        friends.filter { it.displayName.contains(query, ignoreCase = true) }
+                    }
+                    notifyDataSetChanged()
+                }
             }
 
-            // 3. Mostrar diálogo
+            recycler.adapter = adapter
+
+            // 🔎 Filtrar en vivo
+            searchInput.addTextChangedListener { text ->
+                adapter.filter(text?.toString() ?: "")
+            }
+
+            // 3. Mostrar diálogo SOLO después de cargar amigos
             val dialog = androidx.appcompat.app.AlertDialog.Builder(context)
                 .setTitle("Nuevo grupo")
                 .setView(dialogView)
@@ -353,7 +371,7 @@ class ChatListFragment : Fragment() {
 
                     Firebase.firestore.collection("rooms").add(roomData)
                         .addOnSuccessListener {
-                            AppLogger.logInfo(context.toString(), "Grupo creado correctamente")
+                            AppLogger.logInfo("ChatGroup", "Grupo creado correctamente")
                         }
                         .addOnFailureListener { e ->
                             AppLogger.logError(context, e)
@@ -375,10 +393,5 @@ class ChatListFragment : Fragment() {
     private class FriendVH(view: View) : RecyclerView.ViewHolder(view) {
         val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
     }
-
-
-
-
-
 
 }

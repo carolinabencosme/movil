@@ -18,6 +18,20 @@
                 android:layout_height="wrap_content" />
     </com.google.android.material.textfield.TextInputLayout>
 
+    <!-- Buscador de amigos -->
+    <com.google.android.material.textfield.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Buscar amigos"
+            android:layout_marginTop="12dp"
+            app:startIconDrawable="@drawable/ic_search">
+
+        <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/editSearchFriends"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+    </com.google.android.material.textfield.TextInputLayout>
+
     <!-- Lista de amigos -->
     <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/recyclerFriends"
@@ -34,18 +48,6 @@
             android:gravity="end"
             android:orientation="horizontal">
 
-       <!-- <Button
-                android:id="@+id/buttonCancel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Cancelar" />-->
-
-        <!--<Button
-                android:id="@+id/buttonCreate"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Crear"
-                android:layout_marginStart="8dp" />-->
     </LinearLayout>
 
 </LinearLayout>

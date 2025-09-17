@@ -55,6 +55,7 @@ dependencies {
     // Lifecycle
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
 
     // Firebase (BOM)
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
@@ -68,6 +69,14 @@ dependencies {
     // Glide (carga de imágenes)
     implementation("com.github.bumptech.glide:glide:4.16.0")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
+
+    // Cryptography
+    implementation("com.google.crypto.tink:tink-android:1.14.0")
+    implementation("androidx.security:security-crypto-ktx:1.1.0-alpha06")
+
+    // Coroutines
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
     // Tests
     testImplementation("junit:junit:4.13.2")

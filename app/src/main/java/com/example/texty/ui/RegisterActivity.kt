@@ -5,8 +5,11 @@ import android.os.Bundle
 import android.util.Patterns
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import com.example.texty.R
+import com.example.texty.crypto.KeyManager
 import com.example.texty.model.User
+import com.example.texty.repository.KeyRepository
 import com.example.texty.util.AppLogger
 import com.google.android.material.appbar.MaterialToolbar
 import android.widget.Button
@@ -16,6 +19,10 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class RegisterActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,34 +65,48 @@ class RegisterActivity : AppCompatActivity() {
       }
       if (!isValid) return@setOnClickListener
 
-      Firebase.auth.createUserWithEmailAndPassword(email, password)
-        .addOnSuccessListener { result ->
-          val user = result.user ?: return@addOnSuccessListener
-          // Update the FirebaseAuth profile with the provided display name
+      lifecycleScope.launch {
+        registerButton.isEnabled = false
+        try {
+          val authResult = Firebase.auth.createUserWithEmailAndPassword(email, password).await()
+          val user = authResult.user ?: throw IllegalStateException("Unable to create user")
+
           val profileUpdates = userProfileChangeRequest { displayName = name }
-          user.updateProfile(profileUpdates).addOnFailureListener { e -> AppLogger.logError(this, e) }
+          user.updateProfile(profileUpdates).await()
+
+          val keyManager = KeyManager(applicationContext)
+          val keyResult = withContext(Dispatchers.IO) { keyManager.ensureKeyBundle() }
 
           val profile = User(
             uid = user.uid,
             displayName = name,
             photoUrl = user.photoUrl?.toString(),
             isOnline = true,
+            identityPublicKey = keyResult.bundle.identityPublicKey,
+            identitySignaturePublicKey = keyResult.bundle.identitySignaturePublicKey,
+            signedPreKeyId = keyResult.bundle.signedPreKeyId,
+            signedPreKey = keyResult.bundle.signedPreKey,
+            signedPreKeySignature = keyResult.bundle.signedPreKeySignature,
+            oneTimePreKeys = keyResult.bundle.oneTimePreKeys,
           )
 
-          Firebase.firestore.collection("users").document(user.uid).set(profile)
-            .addOnSuccessListener {
-              startActivity(Intent(this, MainActivity::class.java))
-              finish()
-            }
-            .addOnFailureListener { e ->
-              AppLogger.logError(this, e)
-              Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
-            }
+          Firebase.firestore.collection("users").document(user.uid).set(profile).await()
+
+          KeyRepository.getInstance(applicationContext).cacheBundle(user.uid, keyResult.bundle)
+
+          startActivity(Intent(this@RegisterActivity, MainActivity::class.java))
+          finish()
+        } catch (e: Exception) {
+          AppLogger.logError(this@RegisterActivity, e)
+          Toast.makeText(
+            this@RegisterActivity,
+            e.localizedMessage ?: getString(R.string.error_generic),
+            Toast.LENGTH_LONG
+          ).show()
+        } finally {
+          registerButton.isEnabled = true
         }
-        .addOnFailureListener { e ->
-          AppLogger.logError(this, e)
-          Toast.makeText(this, e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG).show()
-        }
+      }
     }
   }
 

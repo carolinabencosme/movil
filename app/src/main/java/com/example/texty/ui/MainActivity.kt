@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.util.Log
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.example.texty.R
+import com.example.texty.repository.KeyRepository
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
@@ -17,6 +19,7 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -36,6 +39,12 @@ class MainActivity : AppCompatActivity() {
         val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigation)
         if (savedInstanceState == null) {
             replaceFragment(ChatListFragment())
+        }
+
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            lifecycleScope.launch {
+                KeyRepository.getInstance(applicationContext).ensureLocalKeys(uid)
+            }
         }
 
         bottomNav.setOnItemSelectedListener { item ->
@@ -65,6 +74,11 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         setOnlineStatus(true)
         requestNotificationPermission()
+        FirebaseAuth.getInstance().currentUser?.uid?.let { uid ->
+            lifecycleScope.launch {
+                KeyRepository.getInstance(applicationContext).refreshOneTimePreKeysIfNeeded(uid)
+            }
+        }
     }
 
     override fun onStop() {

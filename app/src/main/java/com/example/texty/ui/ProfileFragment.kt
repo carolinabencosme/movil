@@ -25,6 +25,7 @@ import com.google.firebase.storage.ktx.storage
 
 class ProfileFragment : Fragment() {
     private var imageUri: Uri? = null
+    private var currentProfile: User? = null
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
@@ -66,6 +67,7 @@ class ProfileFragment : Fragment() {
             Firebase.firestore.collection("users").document(uid).get()
                 .addOnSuccessListener { doc ->
                     val profile = doc.toObject(User::class.java)
+                    currentProfile = profile
                     aboutInput.setText(profile?.about ?: "")
                     phoneInput.setText(profile?.phone ?: "")
                 }
@@ -87,14 +89,16 @@ class ProfileFragment : Fragment() {
                     this.photoUri = photoUri
                 }
                 user.updateProfile(profileUpdates).addOnSuccessListener {
-                    val profile = User(
+                    val baseProfile = currentProfile ?: User(uid = uid)
+                    val profile = baseProfile.copy(
                         uid = uid,
                         displayName = name,
-                        photoUrl = photoUri?.toString(),
+                        photoUrl = photoUri?.toString() ?: baseProfile.photoUrl,
                         isOnline = true,
                         about = about,
                         phone = phone,
                     )
+                    currentProfile = profile
                     Firebase.firestore.collection("users").document(uid).set(profile)
                 }
             }

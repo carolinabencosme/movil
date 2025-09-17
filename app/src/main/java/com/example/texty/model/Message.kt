@@ -32,4 +32,9 @@ data class MessageBody(
     val text: String? = null,
     val attachmentUrl: String? = null,
     val attachmentMimeType: String? = null,
+    val attachmentStoragePath: String? = null,
+    val attachmentNonce: String? = null,
+    val attachmentMac: String? = null,
+    val attachmentSalt: String? = null,
+    val attachmentSize: Long? = null,
 )

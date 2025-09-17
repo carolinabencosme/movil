@@ -27,7 +27,8 @@ import androidx.core.widget.addTextChangedListener
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
-import com.example.texty.repository.UserRepository;
+import com.example.texty.repository.ChatRoomRepository
+import com.example.texty.repository.UserRepository
 import com.google.firebase.firestore.ktx.firestore
 
 class ChatListFragment : Fragment() {
@@ -35,6 +36,7 @@ class ChatListFragment : Fragment() {
     private lateinit var adapter: ChatListAdapter
     private lateinit var searchInput: TextInputEditText
     private var allRooms: List<ChatRoom> = emptyList()
+    private val chatRoomRepository = ChatRoomRepository()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -354,28 +356,23 @@ class ChatListFragment : Fragment() {
                     }
 
                     // Construir ChatRoom
-                    val participantIds = selectedFriends.toMutableList().apply { add(uid) }
-                    val userNames = friends.associate { it.uid to it.displayName }
-                        .toMutableMap().apply {
-                            this[uid] = Firebase.auth.currentUser?.displayName ?: "Yo"
-                        }
+                    val selectedUsers = friends.filter { selectedFriends.contains(it.uid) }
 
-                    val roomData = mapOf(
-                        "participantIds" to participantIds,
-                        "userNames" to userNames,
-                        "isGroup" to true,
-                        "groupName" to groupName,
-                        "lastMessage" to "",
-                        "updatedAt" to com.google.firebase.Timestamp.now()
-                    )
-
-                    Firebase.firestore.collection("rooms").add(roomData)
-                        .addOnSuccessListener {
+                    chatRoomRepository.createGroup(
+                        context = context,
+                        creatorUid = uid,
+                        creatorDisplayName = Firebase.auth.currentUser?.displayName
+                            ?: "Yo",
+                        groupName = groupName,
+                        members = selectedUsers,
+                        onSuccess = {
                             AppLogger.logInfo("ChatGroup", "Grupo creado correctamente")
-                        }
-                        .addOnFailureListener { e ->
+                        },
+                        onFailure = { e ->
                             AppLogger.logError(context, e)
-                        }
+                            ErrorLogger.log(context, e)
+                        },
+                    )
 
                     d.dismiss()
                 }

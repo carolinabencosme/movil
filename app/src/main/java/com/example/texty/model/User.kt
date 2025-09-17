@@ -18,4 +18,5 @@ data class User(
     val signedPreKey: String? = null,
     val signedPreKeySignature: String? = null,
     val oneTimePreKeys: List<OneTimePreKeyInfo> = emptyList(),
+    val consumedOneTimePreKeys: List<Int> = emptyList(),
 )

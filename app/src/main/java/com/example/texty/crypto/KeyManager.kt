@@ -170,6 +170,19 @@ class KeyManager(context: Context) {
         return decode(match.privateKey)
     }
 
+    fun getIdentityPrivateKey(): ByteArray? {
+        val stored = prefs.getString(PREF_IDENTITY_PRIVATE, null) ?: return null
+        return decode(stored)
+    }
+
+    fun getIdentityPublicKey(): ByteArray? {
+        val stored = prefs.getString(PREF_IDENTITY_PUBLIC, null) ?: return null
+        return decode(stored)
+    }
+
+    fun getIdentityPublicKeyBase64(): String? =
+        prefs.getString(PREF_IDENTITY_PUBLIC, null)
+
     private fun ensureIdentityKeyPair(): Pair<StoredKeyPair, Boolean> {
         val existingPublic = prefs.getString(PREF_IDENTITY_PUBLIC, null)
         val existingPrivate = prefs.getString(PREF_IDENTITY_PRIVATE, null)

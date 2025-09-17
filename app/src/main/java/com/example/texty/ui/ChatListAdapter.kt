@@ -43,8 +43,17 @@ class ChatListAdapter(
         }
 
         // Último mensaje
+        val context = holder.itemView.context
+        val previewText = when {
+            room.summaryRequiresResync -> context.getString(R.string.chat_message_unavailable_resync)
+            room.summaryError -> context.getString(R.string.chat_message_unavailable)
+            room.lastMessagePreview != null && room.lastMessagePreview.isBlank() ->
+                context.getString(R.string.chat_message_empty_placeholder)
+            !room.lastMessagePreview.isNullOrBlank() -> room.lastMessagePreview
+            else -> context.getString(R.string.chat_message_unavailable)
+        }
         holder.lastMessageText.apply {
-            text = room.lastMessage
+            text = previewText
             visibility = View.VISIBLE
         }
 
@@ -79,24 +88,6 @@ class ChatListAdapter(
         // Click para abrir el chat
         holder.itemView.setOnClickListener { onClick(room) }
     }
-
-
-    /*override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
-        val room = getItem(position)
-        holder.nameText.text = room.contactName
-        holder.lastMessageText.apply {
-            text = room.lastMessage
-            visibility = View.VISIBLE
-        }
-        holder.statusView.setBackgroundResource(R.drawable.offline_indicator)
-        Firebase.firestore.collection("users").document(room.contactUid).get()
-            .addOnSuccessListener { snapshot ->
-                val online = snapshot.getBoolean("isOnline") == true
-                holder.statusView.setBackgroundResource(if (online) R.drawable.online_indicator else R.drawable.offline_indicator)
-            }
-        holder.itemView.setOnClickListener { onClick(room) }
-    }*/
-
     companion object {
         private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<ChatRoom>() {
             override fun areItemsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {

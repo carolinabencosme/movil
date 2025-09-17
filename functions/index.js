@@ -88,8 +88,7 @@ exports.sendMessageNotification = functions.firestore
 
         // 3) Payload
         const title = msg.senderName || 'Nuevo mensaje';
-        const body = (msg.text || (msg.imageUrl ? '📷 Imagen' : '📩 Tienes un nuevo mensaje'))
-            .toString().slice(0, 140);
+        const body = 'Tienes un mensaje nuevo';
 
         const common = {
             notification: { title, body },
@@ -159,7 +158,6 @@ exports.updateUnreadCounts = functions.firestore
         });
 
         // (Opcional útil): actualiza metadatos del room para tu lista
-        updates['lastMessage'] = (message.text || (message.imageUrl ? '📷 Imagen' : 'Nuevo mensaje')).toString().slice(0, 140);
         updates['updatedAt'] = admin.firestore.FieldValue.serverTimestamp();
         updates['lastSenderId'] = senderId || '';
 

@@ -53,6 +53,7 @@ class ChatActivity : AppCompatActivity() {
   private var recipientUid: String? = null
   private var recipientName: String? = null
   private var groupName: String? = null
+  private var participantIds: List<String> = emptyList()
 
   private val sessionKeyRepository = SessionKeyRepository()
   private var sessionKeyInfo: SessionKeyInfo? = null
@@ -163,6 +164,14 @@ class ChatActivity : AppCompatActivity() {
     sendImageButton.setOnClickListener { pickImageLauncher.launch("image/*") }
 
     lifecycleScope.launch {
+      participantIds = resolveParticipantIds(
+        isGroupChat = isGroupChat,
+        currentUid = currentUid,
+        peerUid = recipientUid,
+      )
+
+      purgeLegacyLastMessageField()
+
       val sessionInfo = loadSessionInfo(
         roomId = resolvedRoomId,
         ownerUid = currentUid,
@@ -332,23 +341,25 @@ class ChatActivity : AppCompatActivity() {
       "readBy" to encryptionResult.readBy,
     )
 
+    val sanitizedPreview = preview.take(SUMMARY_MAX_LENGTH)
+
     val roomData = if (isGroupChat) {
-      mapOf(
-        "lastMessage" to preview,
+      mutableMapOf<String, Any>(
         "updatedAt" to FieldValue.serverTimestamp(),
       )
     } else {
       val peerUid = recipientUid ?: return
-      mapOf(
+      mutableMapOf<String, Any>(
         "participantIds" to listOf(currentUid, peerUid),
         "userNames" to mapOf(
           currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
           peerUid to title,
         ),
-        "lastMessage" to preview,
         "updatedAt" to FieldValue.serverTimestamp(),
       )
     }
+
+    roomData["lastMessage"] = FieldValue.delete()
 
     try {
       withContext(Dispatchers.IO) {
@@ -360,6 +371,27 @@ class ChatActivity : AppCompatActivity() {
       ErrorLogger.log(this, error)
       Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
       return
+    }
+
+    val summaryParticipants = if (participantIds.isNotEmpty()) {
+      participantIds
+    } else {
+      listOfNotNull(currentUid, recipientUid)
+    }
+
+    if (sanitizedPreview.isNotEmpty()) {
+      try {
+        updateEncryptedSummaries(
+          participants = summaryParticipants,
+          sessionInfo = sessionInfo,
+          previewText = sanitizedPreview,
+          senderId = currentUid,
+          messageType = messageType,
+        )
+      } catch (error: Exception) {
+        AppLogger.logError(this, error)
+        ErrorLogger.log(this, error)
+      }
     }
 
     if (messageType == MESSAGE_TYPE_TEXT) {
@@ -461,8 +493,96 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  private suspend fun resolveParticipantIds(
+    isGroupChat: Boolean,
+    currentUid: String,
+    peerUid: String?,
+  ): List<String> {
+    if (!isGroupChat) {
+      return listOfNotNull(currentUid, peerUid).distinct()
+    }
+
+    return try {
+      val snapshot = withContext(Dispatchers.IO) { roomRef.get().await() }
+      val ids = (snapshot.get("participantIds") as? List<*>)
+        ?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }
+        ?.distinct()
+        .orEmpty()
+      if (ids.isEmpty()) listOf(currentUid) else ids
+    } catch (error: Exception) {
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
+      listOf(currentUid)
+    }
+  }
+
+  private suspend fun purgeLegacyLastMessageField() {
+    try {
+      withContext(Dispatchers.IO) {
+        roomRef.set(mapOf("lastMessage" to FieldValue.delete()), SetOptions.merge()).await()
+      }
+    } catch (_: Exception) {
+      // Cleanup is best-effort; failures will be retried on the next sync.
+    }
+  }
+
+  private suspend fun updateEncryptedSummaries(
+    participants: List<String>,
+    sessionInfo: SessionKeyInfo,
+    previewText: String,
+    senderId: String,
+    messageType: String,
+  ) {
+    val distinctParticipants = participants.filter { it.isNotBlank() }.distinct()
+    if (distinctParticipants.isEmpty()) return
+
+    val encryptedSummaries = withContext(Dispatchers.Default) {
+      distinctParticipants.map { uid ->
+        val metadata = MessageCrypto.EncryptionMetadata(
+          senderId = senderId,
+          messageType = SUMMARY_MESSAGE_PREFIX + messageType,
+          readBy = listOf(uid),
+          schemeVersion = sessionInfo.schemeVersion,
+          encryptionTarget = sessionInfo.encryptionTarget,
+        )
+        val result = MessageCrypto.encrypt(sessionInfo, MessageBody(text = previewText), metadata)
+        SummaryEncryption(uid = uid, metadata = metadata, result = result)
+      }
+    }
+
+    withContext(Dispatchers.IO) {
+      encryptedSummaries.forEach { summary ->
+        val payload = summary.result.payload
+        val data = hashMapOf<String, Any>(
+          "summaryCiphertext" to payload.ciphertext,
+          "summaryNonce" to payload.nonce,
+          "summarySalt" to payload.salt,
+          "summarySchemeVersion" to payload.schemeVersion,
+          "summaryEncryptionTarget" to payload.encryptionTarget,
+          "summaryMessageType" to summary.metadata.messageType,
+          "summarySenderId" to summary.metadata.senderId,
+          "summaryReadBy" to summary.metadata.readBy,
+          "updatedAt" to FieldValue.serverTimestamp(),
+        )
+        roomRef.collection("userState")
+          .document(summary.uid)
+          .set(data, SetOptions.merge())
+          .await()
+      }
+    }
+  }
+
+  private data class SummaryEncryption(
+    val uid: String,
+    val metadata: MessageCrypto.EncryptionMetadata,
+    val result: MessageCrypto.EncryptionResult,
+  )
+
   companion object {
     private const val MESSAGE_TYPE_TEXT = "text/plain"
     private const val MESSAGE_TYPE_IMAGE = "media/image"
+    private const val SUMMARY_MAX_LENGTH = 140
+    private const val SUMMARY_MESSAGE_PREFIX = "summary:"
   }
 }

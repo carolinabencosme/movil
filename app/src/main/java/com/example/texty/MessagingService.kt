@@ -30,16 +30,13 @@ class MessagingService : FirebaseMessagingService() {
   override fun onMessageReceived(message: RemoteMessage) {
     // --- Datos que pueden venir en el payload de data (desde la Cloud Function) ---
     val data = message.data
-    val chatId = data["chatId"]
+    val chatId = data["roomId"] ?: data["chatId"]
     val messageId = data["messageId"]
 
-    // Título y cuerpo: preferimos data, luego notification, luego defaults
     val title = data["senderName"]
       ?: message.notification?.title
-      ?: "Nuevo mensaje"
-    val body = data["body"]
-      ?: message.notification?.body
-      ?: "📩 Tienes un nuevo mensaje"
+      ?: getString(R.string.notification_generic_title)
+    val body = getString(R.string.notification_generic_body)
 
     // Si no podemos publicar notificaciones, salimos silenciosamente
     if (!canPostNotifications()) return

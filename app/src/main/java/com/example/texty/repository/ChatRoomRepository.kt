@@ -71,7 +71,6 @@ class ChatRoomRepository(
             "userNames" to userNames,
             "isGroup" to true,
             "groupName" to groupName,
-            "lastMessage" to "",
             "updatedAt" to FieldValue.serverTimestamp(),
             "groupKeyVersion" to INITIAL_GROUP_KEY_VERSION,
             "groupKeyMaterialFingerprint" to groupKeyWriteSet.keyFingerprint,

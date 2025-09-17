@@ -1,7 +1,5 @@
 package com.example.texty.ui
 
-import com.bumptech.glide.Glide
-
 import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
@@ -62,34 +60,39 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
 
-        if (!message.text.isNullOrBlank()) {
-            holder.messageText.visibility = View.VISIBLE
-            holder.imageView.visibility = View.GONE
-            holder.messageText.text = message.text
-        } else if (!message.imageUrl.isNullOrBlank()) {
-            holder.messageText.visibility = View.GONE
-            holder.imageView.visibility = View.VISIBLE
-            Glide.with(holder.itemView.context)
-                .load(message.imageUrl)
-                .into(holder.imageView)
+        holder.imageView.visibility = View.GONE
+        val context = holder.itemView.context
+        val decrypted = message.decrypted
+        val textToDisplay = when {
+            message.decryptionError -> {
+                if (message.requiresKeyResync) {
+                    context.getString(R.string.chat_message_unavailable_resync)
+                } else {
+                    context.getString(R.string.chat_message_unavailable)
+                }
+            }
+
+            decrypted != null -> {
+                val value = decrypted.displayText.trim()
+                if (value.isNotEmpty()) {
+                    value
+                } else {
+                    context.getString(R.string.chat_message_empty_placeholder)
+                }
+            }
+
+            else -> context.getString(R.string.chat_message_unavailable)
         }
+
+        holder.messageText.visibility = View.VISIBLE
+        holder.messageText.text = textToDisplay
 
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END
-            if (holder.messageText.visibility == View.VISIBLE) {
-                holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
-            }
-            if (holder.imageView.visibility == View.VISIBLE) {
-                holder.imageView.setBackgroundResource(R.drawable.bubble_outgoing)
-            }
+            holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
         } else {
             holder.root.gravity = Gravity.START
-            if (holder.messageText.visibility == View.VISIBLE) {
-                holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
-            }
-            if (holder.imageView.visibility == View.VISIBLE) {
-                holder.imageView.setBackgroundResource(R.drawable.bubble_incoming)
-            }
+            holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
         }
 
         val ts = message.createdAt

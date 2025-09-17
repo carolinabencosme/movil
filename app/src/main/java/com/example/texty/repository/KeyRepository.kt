@@ -25,6 +25,7 @@ class KeyRepository private constructor(
     private val keyManager = KeyManager(context.applicationContext)
     private val keyCache = MutableStateFlow<Map<String, KeyBundle>>(emptyMap())
 
+
     companion object {
         @Volatile
         private var instance: KeyRepository? = null
@@ -34,7 +35,10 @@ class KeyRepository private constructor(
                 instance ?: KeyRepository(context.applicationContext).also { instance = it }
             }
         }
+
+        private const val USERS_COLLECTION = "users"
     }
+
 
     fun observeCache(): StateFlow<Map<String, KeyBundle>> = keyCache.asStateFlow()
 
@@ -92,15 +96,15 @@ class KeyRepository private constructor(
         val user = snapshot.toObject(User::class.java)
 
         val shouldUpload = user == null ||
-            user.identityPublicKey.isNullOrBlank() ||
-            user.identitySignaturePublicKey.isNullOrBlank() ||
-            user.signedPreKey.isNullOrBlank() ||
-            user.signedPreKeySignature.isNullOrBlank() ||
-            user.signedPreKeyId == null ||
-            user.oneTimePreKeys.isEmpty() ||
-            result.identityKeyUpdated ||
-            result.signedPreKeyUpdated ||
-            result.oneTimePreKeysUpdated
+                user.identityPublicKey.isNullOrBlank() ||
+                user.identitySignaturePublicKey.isNullOrBlank() ||
+                user.signedPreKey.isNullOrBlank() ||
+                user.signedPreKeySignature.isNullOrBlank() ||
+                user.signedPreKeyId == null ||
+                user.oneTimePreKeys.isEmpty() ||
+                result.identityKeyUpdated ||
+                result.signedPreKeyUpdated ||
+                result.oneTimePreKeysUpdated
 
         if (shouldUpload) {
             val data = mapOf(
@@ -115,7 +119,7 @@ class KeyRepository private constructor(
         }
     }
 
-    private companion object {
-        private const val USERS_COLLECTION = "users"
-    }
+    // private companion object {
+    //   private const val USERS_COLLECTION = "users"
+    //}
 }

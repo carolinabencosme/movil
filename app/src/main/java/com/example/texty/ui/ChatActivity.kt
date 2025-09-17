@@ -18,6 +18,7 @@ import com.example.texty.repository.FriendRequestRepository
 import com.example.texty.repository.MessageMapper
 import com.example.texty.repository.SessionKeyRepository
 import com.example.texty.util.AppLogger
+import com.example.texty.util.AttachmentCrypto
 import com.example.texty.util.ErrorLogger
 import com.example.texty.util.MessageCrypto
 import com.google.android.material.appbar.MaterialToolbar
@@ -35,6 +36,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import java.util.UUID
 
 class ChatActivity : AppCompatActivity() {
 
@@ -385,40 +387,78 @@ class ChatActivity : AppCompatActivity() {
     recipientUid: String? = null,
     recipientName: String? = null
   ) {
-    val storageRef = Firebase.storage.reference
-      .child("chat_images/$roomId/${System.currentTimeMillis()}.jpg")
+    val sessionInfo = sessionKeyInfo
+    if (sessionInfo?.rootKey == null) {
+      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      return
+    }
 
-    storageRef.putFile(imageUri)
-      .addOnSuccessListener {
-        storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-          lifecycleScope.launch {
-            val mimeType = contentResolver.getType(imageUri) ?: MESSAGE_TYPE_IMAGE
-            val placeholder = getString(R.string.chat_message_image_preview)
-            sendEncryptedMessage(
-              body = MessageBody(
-                attachmentUrl = downloadUrl.toString(),
-                attachmentMimeType = mimeType,
-              ),
-              messageType = MESSAGE_TYPE_IMAGE,
-              preview = placeholder,
-              currentUid = currentUid,
-              isGroupChat = isGroup,
-              recipientUid = recipientUid,
-              title = recipientName ?: (groupName ?: placeholder),
-            )
+    lifecycleScope.launch {
+      val mimeType = contentResolver.getType(imageUri) ?: MESSAGE_TYPE_IMAGE
+      val placeholder = getString(R.string.chat_message_image_preview)
+      val storagePath = "chat_attachments/$roomId/${System.currentTimeMillis()}-${UUID.randomUUID()}.bin"
+
+      val encryptedAttachment = try {
+        withContext(Dispatchers.IO) {
+          val inputStream = contentResolver.openInputStream(imageUri)
+          val plainBytes = inputStream?.use { it.readBytes() }
+          if (plainBytes == null) {
+            null
+          } else {
+            try {
+              AttachmentCrypto.encryptAttachment(sessionInfo, plainBytes, storagePath, mimeType)
+            } finally {
+              plainBytes.fill(0)
+            }
           }
         }
-          .addOnFailureListener { error ->
-            AppLogger.logError(this, error)
-            ErrorLogger.log(this, error)
-            Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
-          }
+      } catch (error: Exception) {
+        AppLogger.logError(this@ChatActivity, error)
+        ErrorLogger.log(this@ChatActivity, error)
+        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        return@launch
       }
-      .addOnFailureListener { error ->
-        AppLogger.logError(this, error)
-        ErrorLogger.log(this, error)
-        Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+
+      if (encryptedAttachment == null) {
+        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        return@launch
       }
+
+      try {
+        withContext(Dispatchers.IO) {
+          Firebase.storage.reference
+            .child(encryptedAttachment.storagePath)
+            .putBytes(encryptedAttachment.ciphertext)
+            .await()
+        }
+      } catch (error: Exception) {
+        AppLogger.logError(this@ChatActivity, error)
+        ErrorLogger.log(this@ChatActivity, error)
+        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        return@launch
+      } finally {
+        encryptedAttachment.clearCiphertext()
+      }
+
+      val body = MessageBody(
+        attachmentMimeType = mimeType,
+        attachmentStoragePath = encryptedAttachment.storagePath,
+        attachmentNonce = encryptedAttachment.nonceBase64,
+        attachmentMac = encryptedAttachment.macBase64,
+        attachmentSalt = encryptedAttachment.saltBase64,
+        attachmentSize = encryptedAttachment.ciphertextSize.toLong(),
+      )
+
+      sendEncryptedMessage(
+        body = body,
+        messageType = MESSAGE_TYPE_IMAGE,
+        preview = placeholder,
+        currentUid = currentUid,
+        isGroupChat = isGroup,
+        recipientUid = recipientUid,
+        title = recipientName ?: (groupName ?: placeholder),
+      )
+    }
   }
 
   companion object {

@@ -179,6 +179,11 @@ object MessageCrypto {
         if (text != null) json.put("text", text)
         if (attachmentUrl != null) json.put("attachmentUrl", attachmentUrl)
         if (attachmentMimeType != null) json.put("attachmentMimeType", attachmentMimeType)
+        if (attachmentStoragePath != null) json.put("attachmentStoragePath", attachmentStoragePath)
+        if (attachmentNonce != null) json.put("attachmentNonce", attachmentNonce)
+        if (attachmentMac != null) json.put("attachmentMac", attachmentMac)
+        if (attachmentSalt != null) json.put("attachmentSalt", attachmentSalt)
+        if (attachmentSize != null) json.put("attachmentSize", attachmentSize)
         return json.toString().toByteArray(StandardCharsets.UTF_8)
     }
 
@@ -195,10 +200,40 @@ object MessageCrypto {
         } else {
             null
         }
+        val attachmentStoragePath = if (json.has("attachmentStoragePath") && !json.isNull("attachmentStoragePath")) {
+            json.getString("attachmentStoragePath")
+        } else {
+            null
+        }
+        val attachmentNonce = if (json.has("attachmentNonce") && !json.isNull("attachmentNonce")) {
+            json.getString("attachmentNonce")
+        } else {
+            null
+        }
+        val attachmentMac = if (json.has("attachmentMac") && !json.isNull("attachmentMac")) {
+            json.getString("attachmentMac")
+        } else {
+            null
+        }
+        val attachmentSalt = if (json.has("attachmentSalt") && !json.isNull("attachmentSalt")) {
+            json.getString("attachmentSalt")
+        } else {
+            null
+        }
+        val attachmentSize = if (json.has("attachmentSize") && !json.isNull("attachmentSize")) {
+            json.optLong("attachmentSize")
+        } else {
+            null
+        }
         return MessageBody(
             text = text,
             attachmentUrl = attachmentUrl,
             attachmentMimeType = attachmentMimeType,
+            attachmentStoragePath = attachmentStoragePath,
+            attachmentNonce = attachmentNonce,
+            attachmentMac = attachmentMac,
+            attachmentSalt = attachmentSalt,
+            attachmentSize = attachmentSize,
         )
     }
 

@@ -38,4 +38,6 @@
     <string name="chat_message_encrypt_error">No se pudo cifrar el mensaje.</string>
     <string name="chat_message_send_error">No se pudo enviar el mensaje.</string>
     <string name="chat_message_image_preview">📷 Imagen cifrada</string>
+    <string name="notification_generic_title">Nuevo mensaje</string>
+    <string name="notification_generic_body">Tienes un mensaje nuevo</string>
 </resources>

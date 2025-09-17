@@ -96,7 +96,7 @@ class ChatListFragment : Fragment() {
                         id = user.uid, // puedes usar algo como "${uid}_${user.uid}" si prefieres
                         contactUid = user.uid,
                         contactName = user.displayName,
-                        lastMessage = "" // vacío porque aún no hay chat
+                        lastMessagePreview = null // vacío porque aún no hay chat
                     )
                 }
 
@@ -203,7 +203,7 @@ class ChatListFragment : Fragment() {
                             user.uid to user.displayName
                         ),
                         isGroup = false,
-                        lastMessage = ""
+                        lastMessagePreview = null
                     )
                 }
 

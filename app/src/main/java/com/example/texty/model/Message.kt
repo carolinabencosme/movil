@@ -6,9 +6,30 @@ data class Message(
     val id: String = "",
     val senderId: String = "",
     val senderName: String = "",
-    val text: String = "",
-    //val createdAt: Timestamp = Timestamp.now()
     val createdAt: Timestamp? = null,
-    val imageUrl: String? = null,
-    val readBy: List<String> = emptyList()
+    val readBy: List<String> = emptyList(),
+    val messageType: String? = null,
+    val encryption: EncryptionPayload? = null,
+    val decrypted: DecryptedMessage? = null,
+    val decryptionError: Boolean = false,
+    val requiresKeyResync: Boolean = false,
+)
+
+data class EncryptionPayload(
+    val ciphertext: String = "",
+    val nonce: String = "",
+    val salt: String = "",
+    val schemeVersion: Int = 1,
+    val encryptionTarget: String = "",
+)
+
+data class DecryptedMessage(
+    val body: MessageBody,
+    val displayText: String,
+)
+
+data class MessageBody(
+    val text: String? = null,
+    val attachmentUrl: String? = null,
+    val attachmentMimeType: String? = null,
 )

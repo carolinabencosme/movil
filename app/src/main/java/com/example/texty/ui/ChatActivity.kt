@@ -8,22 +8,33 @@ import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
-import com.example.texty.model.Message
+import com.example.texty.model.MessageBody
+import com.example.texty.model.SessionKeyInfo
 import com.example.texty.repository.FriendRequestRepository
+import com.example.texty.repository.MessageMapper
+import com.example.texty.repository.SessionKeyRepository
 import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
+import com.example.texty.util.MessageCrypto
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.CollectionReference
+import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 
 class ChatActivity : AppCompatActivity() {
 
@@ -32,6 +43,8 @@ class ChatActivity : AppCompatActivity() {
   private lateinit var messageInput: EditText
   private lateinit var sendButton: Button
   private lateinit var listenerRegistration: ListenerRegistration
+  private lateinit var roomRef: DocumentReference
+  private lateinit var messagesRef: CollectionReference
 
   private var isGroup: Boolean = false
   private var roomId: String? = null
@@ -39,20 +52,26 @@ class ChatActivity : AppCompatActivity() {
   private var recipientName: String? = null
   private var groupName: String? = null
 
+  private val sessionKeyRepository = SessionKeyRepository()
+  private var sessionKeyInfo: SessionKeyInfo? = null
+  private var messageMapper: MessageMapper? = null
+
   private val pickImageLauncher = registerForActivityResult(
     ActivityResultContracts.GetContent()
   ) { uri: Uri? ->
     val currentUser = Firebase.auth.currentUser ?: return@registerForActivityResult
+    val activeRoomId = roomId ?: return@registerForActivityResult
     if (uri != null) {
-      if (isGroup) {
-        val id = roomId ?: return@registerForActivityResult
-        sendImageMessage(id, currentUser.uid, uri, true)
-      } else {
-        val recipientUid = recipientUid ?: return@registerForActivityResult
-        val recipientName = recipientName ?: return@registerForActivityResult
-        val id = listOf(currentUser.uid, recipientUid).sorted().joinToString("_")
-        sendImageMessage(id, currentUser.uid, uri, false, recipientUid, recipientName)
-      }
+      val targetRecipientUid = recipientUid
+      val targetRecipientName = recipientName
+      sendImageMessage(
+        roomId = activeRoomId,
+        currentUid = currentUser.uid,
+        imageUri = uri,
+        isGroup = isGroup,
+        recipientUid = targetRecipientUid,
+        recipientName = targetRecipientName
+      )
     }
   }
 
@@ -108,14 +127,10 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
-  private fun initChat(currentUid: String, recipientUid: String?, title: String, isGroup: Boolean) {
+  private fun initChat(currentUid: String, recipientUid: String?, title: String, isGroupChat: Boolean) {
     setContentView(R.layout.activity_chat)
 
     val sendImageButton = findViewById<MaterialButton>(R.id.buttonSendImage)
-    sendImageButton.setOnClickListener {
-      pickImageLauncher.launch("image/*")
-    }
-
     val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -131,92 +146,222 @@ class ChatActivity : AppCompatActivity() {
     }
     recyclerView.adapter = adapter
 
-    val id = if (isGroup) {
-      roomId!!
+    val resolvedRoomId = if (isGroupChat) {
+      roomId ?: throw IllegalStateException("roomId must be set for group chats")
     } else {
       listOf(currentUid, recipientUid!!).sorted().joinToString("_")
     }
+    roomId = resolvedRoomId
+    roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
+    messagesRef = roomRef.collection("messages")
 
-    val ref = Firebase.firestore
-      .collection("rooms")
-      .document(id)
-      .collection("messages")
+    sendButton.isEnabled = false
+    sendImageButton.isEnabled = false
 
-    // Reset unread count when entering the chat
-    Firebase.firestore.collection("rooms").document(id)
-      .update("unreadCounts.$currentUid", 0)
+    sendImageButton.setOnClickListener { pickImageLauncher.launch("image/*") }
 
-    listenerRegistration =
-      ref.orderBy("createdAt").addSnapshotListener { value, error ->
-        if (error != null) {
-          AppLogger.logError(this, error)
-          return@addSnapshotListener
-        }
-        val documents = value?.documents ?: return@addSnapshotListener
-        val messages = documents.mapNotNull { doc ->
-          doc.toObject(Message::class.java)?.copy(id = doc.id)
-        }
-        adapter.submitList(messages)
-        if (adapter.itemCount > 0) recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
+    lifecycleScope.launch {
+      val sessionInfo = loadSessionInfo(
+        roomId = resolvedRoomId,
+        ownerUid = currentUid,
+        isGroup = isGroupChat,
+        peerUid = recipientUid
+      )
+      sessionKeyInfo = sessionInfo
+      messageMapper = MessageMapper(sessionInfo)
 
-        val unreadDocs = documents.filter { doc ->
-          val readBy = doc.get("readBy") as? List<*> ?: emptyList<Any>()
-          !readBy.contains(currentUid)
-        }
-        if (unreadDocs.isNotEmpty()) {
-          val batch = Firebase.firestore.batch()
-          unreadDocs.forEach { d ->
-            batch.update(d.reference, "readBy", FieldValue.arrayUnion(currentUid))
-          }
-          val roomRef = Firebase.firestore.collection("rooms").document(id)
-          batch.update(roomRef, mapOf("unreadCounts.$currentUid" to 0))
-          batch.commit()
-        }
+      if (sessionInfo?.requiresReauth == true) {
+        Toast.makeText(this@ChatActivity, R.string.chat_session_requires_resync, Toast.LENGTH_LONG).show()
       }
+
+      sendButton.isEnabled = true
+      sendImageButton.isEnabled = true
+
+      try {
+        roomRef.update("unreadCounts.$currentUid", 0).await()
+      } catch (_: Exception) {
+        // Ignore failures when resetting unread counts.
+      }
+
+      startMessageListener(currentUid, resolvedRoomId)
+    }
 
     sendButton.setOnClickListener {
       val text = messageInput.text.toString().trim()
       if (text.isEmpty()) return@setOnClickListener
 
-      val messageData = mapOf(
-        "senderId" to currentUid,
-        "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
-        "text" to text,
-        "createdAt" to FieldValue.serverTimestamp(),
-        "readBy" to listOf(currentUid)
-      )
-
-      val roomData = if (isGroup) {
-        mapOf(
-          "lastMessage" to text,
-          "updatedAt" to FieldValue.serverTimestamp()
-        )
-      } else {
-        mapOf(
-          "participantIds" to listOf(currentUid, recipientUid!!),
-          "userNames" to mapOf(
-            currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
-            recipientUid to title
-          ),
-          "lastMessage" to text,
-          "updatedAt" to FieldValue.serverTimestamp()
+      lifecycleScope.launch {
+        sendEncryptedMessage(
+          body = MessageBody(text = text),
+          messageType = MESSAGE_TYPE_TEXT,
+          preview = text,
+          currentUid = currentUid,
+          isGroupChat = isGroupChat,
+          recipientUid = recipientUid,
+          title = title,
         )
       }
+    }
+  }
 
-      val roomRef = Firebase.firestore.collection("rooms").document(id)
-      roomRef.set(roomData, SetOptions.merge())
-        .addOnSuccessListener {
-          ref.add(messageData)
-            .addOnSuccessListener { messageInput.text?.clear() }
-            .addOnFailureListener { e ->
-              AppLogger.logError(this, e)
-              ErrorLogger.log(this, e)
-            }
+  private suspend fun loadSessionInfo(
+    roomId: String,
+    ownerUid: String,
+    isGroup: Boolean,
+    peerUid: String?,
+  ): SessionKeyInfo? {
+    return try {
+      sessionKeyRepository.loadSessionKey(
+        roomId = roomId,
+        ownerUid = ownerUid,
+        isGroup = isGroup,
+        peerUid = peerUid,
+      )
+    } catch (error: Exception) {
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
+      null
+    }
+  }
+
+  private fun startMessageListener(currentUid: String, resolvedRoomId: String) {
+    if (::listenerRegistration.isInitialized) {
+      listenerRegistration.remove()
+    }
+
+    listenerRegistration =
+      messagesRef.orderBy("createdAt").addSnapshotListener { value, error ->
+        if (error != null) {
+          AppLogger.logError(this, error)
+          return@addSnapshotListener
         }
-        .addOnFailureListener { e ->
-          AppLogger.logError(this, e)
-          ErrorLogger.log(this, e)
+
+        val mapper = messageMapper ?: return@addSnapshotListener
+        val documents = value?.documents ?: return@addSnapshotListener
+        val mapped = documents.mapNotNull { mapper.map(it) }
+
+        adapter.submitList(mapped.map { it.message })
+        if (adapter.itemCount > 0) {
+          recyclerView.post {
+            recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
+          }
         }
+
+        lifecycleScope.launch(Dispatchers.IO) {
+          updateReadReceipts(mapped, currentUid)
+        }
+      }
+  }
+
+  private suspend fun updateReadReceipts(
+    documents: List<MessageMapper.MessageDocument>,
+    currentUid: String,
+  ) {
+    val mapper = messageMapper ?: return
+    val unread = documents.filter { !it.message.readBy.contains(currentUid) }
+    if (unread.isEmpty()) return
+
+    val batch = Firebase.firestore.batch()
+    var operations = 0
+    unread.forEach { document ->
+      val update = mapper.buildReadReceiptUpdate(document, currentUid)
+      if (update != null) {
+        batch.set(document.snapshot.reference, update.first, update.second)
+        operations++
+      }
+    }
+
+    if (operations == 0) return
+
+    batch.update(roomRef, mapOf("unreadCounts.$currentUid" to 0))
+
+    try {
+      batch.commit().await()
+    } catch (error: Exception) {
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
+    }
+  }
+
+  private suspend fun sendEncryptedMessage(
+    body: MessageBody,
+    messageType: String,
+    preview: String,
+    currentUid: String,
+    isGroupChat: Boolean,
+    recipientUid: String?,
+    title: String,
+  ) {
+    val sessionInfo = sessionKeyInfo
+    if (sessionInfo?.rootKey == null) {
+      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      return
+    }
+
+    val metadata = MessageCrypto.EncryptionMetadata(
+      senderId = currentUid,
+      messageType = messageType,
+      readBy = listOf(currentUid),
+      schemeVersion = sessionInfo.schemeVersion,
+      encryptionTarget = sessionInfo.encryptionTarget,
+    )
+
+    val encryptionResult = try {
+      withContext(Dispatchers.Default) {
+        MessageCrypto.encrypt(sessionInfo, body, metadata)
+      }
+    } catch (error: Exception) {
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
+      Toast.makeText(this, R.string.chat_message_encrypt_error, Toast.LENGTH_SHORT).show()
+      return
+    }
+
+    val messageData = hashMapOf<String, Any>(
+      "senderId" to currentUid,
+      "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
+      "ciphertext" to encryptionResult.payload.ciphertext,
+      "nonce" to encryptionResult.payload.nonce,
+      "salt" to encryptionResult.payload.salt,
+      "schemeVersion" to encryptionResult.payload.schemeVersion,
+      "encryptionTarget" to encryptionResult.payload.encryptionTarget,
+      "messageType" to messageType,
+      "createdAt" to FieldValue.serverTimestamp(),
+      "readBy" to encryptionResult.readBy,
+    )
+
+    val roomData = if (isGroupChat) {
+      mapOf(
+        "lastMessage" to preview,
+        "updatedAt" to FieldValue.serverTimestamp(),
+      )
+    } else {
+      val peerUid = recipientUid ?: return
+      mapOf(
+        "participantIds" to listOf(currentUid, peerUid),
+        "userNames" to mapOf(
+          currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+          peerUid to title,
+        ),
+        "lastMessage" to preview,
+        "updatedAt" to FieldValue.serverTimestamp(),
+      )
+    }
+
+    try {
+      withContext(Dispatchers.IO) {
+        roomRef.set(roomData, SetOptions.merge()).await()
+        messagesRef.add(messageData).await()
+      }
+    } catch (error: Exception) {
+      AppLogger.logError(this, error)
+      ErrorLogger.log(this, error)
+      Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+      return
+    }
+
+    if (messageType == MESSAGE_TYPE_TEXT) {
+      messageInput.text?.clear()
     }
   }
 
@@ -246,41 +391,38 @@ class ChatActivity : AppCompatActivity() {
     storageRef.putFile(imageUri)
       .addOnSuccessListener {
         storageRef.downloadUrl.addOnSuccessListener { downloadUrl ->
-          val messageData = mapOf(
-            "senderId" to currentUid,
-            "senderName" to (Firebase.auth.currentUser?.displayName ?: ""),
-            "imageUrl" to downloadUrl.toString(),
-            "createdAt" to FieldValue.serverTimestamp(),
-            "readBy" to listOf(currentUid)
-          )
-
-          val roomData = if (isGroup) {
-            mapOf(
-              "lastMessage" to "📷 Imagen",
-              "updatedAt" to FieldValue.serverTimestamp()
-            )
-          } else {
-            mapOf(
-              "participantIds" to listOf(currentUid, recipientUid!!),
-              "userNames" to mapOf(
-                currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
-                recipientUid to recipientName
+          lifecycleScope.launch {
+            val mimeType = contentResolver.getType(imageUri) ?: MESSAGE_TYPE_IMAGE
+            val placeholder = getString(R.string.chat_message_image_preview)
+            sendEncryptedMessage(
+              body = MessageBody(
+                attachmentUrl = downloadUrl.toString(),
+                attachmentMimeType = mimeType,
               ),
-              "lastMessage" to "Imagen",
-              "updatedAt" to FieldValue.serverTimestamp()
+              messageType = MESSAGE_TYPE_IMAGE,
+              preview = placeholder,
+              currentUid = currentUid,
+              isGroupChat = isGroup,
+              recipientUid = recipientUid,
+              title = recipientName ?: (groupName ?: placeholder),
             )
           }
-
-          val roomRef = Firebase.firestore.collection("rooms").document(roomId)
-          roomRef.set(roomData, SetOptions.merge())
-            .addOnSuccessListener {
-              roomRef.collection("messages")
-                .add(messageData)
-                .addOnFailureListener { e -> ErrorLogger.log(this, e) }
-            }
-            .addOnFailureListener { e -> ErrorLogger.log(this, e) }
         }
+          .addOnFailureListener { error ->
+            AppLogger.logError(this, error)
+            ErrorLogger.log(this, error)
+            Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+          }
       }
-      .addOnFailureListener { e -> ErrorLogger.log(this, e) }
+      .addOnFailureListener { error ->
+        AppLogger.logError(this, error)
+        ErrorLogger.log(this, error)
+        Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+      }
+  }
+
+  companion object {
+    private const val MESSAGE_TYPE_TEXT = "text/plain"
+    private const val MESSAGE_TYPE_IMAGE = "media/image"
   }
 }

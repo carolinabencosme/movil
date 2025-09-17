@@ -12,4 +12,10 @@ data class User(
     val phone: String = "",
     val friends: List<String> = emptyList(),
     val fcmTokens: List<String> = emptyList(),
+    val identityPublicKey: String? = null,
+    val identitySignaturePublicKey: String? = null,
+    val signedPreKeyId: Int? = null,
+    val signedPreKey: String? = null,
+    val signedPreKeySignature: String? = null,
+    val oneTimePreKeys: List<OneTimePreKeyInfo> = emptyList(),
 )

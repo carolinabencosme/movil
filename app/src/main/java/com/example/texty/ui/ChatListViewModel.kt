@@ -138,7 +138,9 @@ class ChatListViewModel : ViewModel() {
             .document(ownerUid)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    summaryStates[roomId] = RoomSummaryState(null, null, hasError = true, requiresResync = false)
+                    summaryStates[roomId] = RoomSummaryState(null,
+                        hasError = true,
+                        requiresResync = false)
                     publishRooms()
                     return@addSnapshotListener
                 }
@@ -248,7 +250,6 @@ class ChatListViewModel : ViewModel() {
         reference
             .set(mapOf("lastMessage" to FieldValue.delete()), SetOptions.merge())
             .addOnFailureListener {
-                // Ignore cleanup failures – a future sync will retry.
             }
     }
 

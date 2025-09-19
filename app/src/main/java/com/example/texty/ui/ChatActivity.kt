@@ -11,7 +11,9 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.core.app.NotificationManagerCompat
 import com.example.texty.R
+import com.example.texty.NotificationCounter
 import com.example.texty.model.MessageBody
 import com.example.texty.model.SessionKeyInfo
 import com.example.texty.repository.FriendRequestRepository
@@ -155,6 +157,8 @@ class ChatActivity : AppCompatActivity() {
       listOf(currentUid, recipientUid!!).sorted().joinToString("_")
     }
     roomId = resolvedRoomId
+    NotificationCounter.getInstance(applicationContext).clear(resolvedRoomId)
+    NotificationManagerCompat.from(this).cancel(resolvedRoomId.hashCode())
     roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
     messagesRef = roomRef.collection("messages")
 
@@ -288,6 +292,10 @@ class ChatActivity : AppCompatActivity() {
 
     try {
       batch.commit().await()
+      roomId?.let {
+        NotificationCounter.getInstance(applicationContext).clear(it)
+        NotificationManagerCompat.from(this).cancel(it.hashCode())
+      }
     } catch (error: Exception) {
       AppLogger.logError(this, error)
       ErrorLogger.log(this, error)

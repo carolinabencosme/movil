@@ -43,7 +43,6 @@ class FriendRequestRepository(
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener(onFailure)
     }
-
     fun acceptRequest(
         requestId: String,
         fromUid: String,
@@ -55,10 +54,18 @@ class FriendRequestRepository(
         val fromRef = usersCollection.document(fromUid)
         val toRef = usersCollection.document(toUid)
 
-        firestore.runTransaction { transaction ->
-            val fromSnapshot = transaction.get(fromRef)
-            val toSnapshot = transaction.get(toRef)
+        firestore.runTransaction { tx ->
 
+            val requestSnap = tx.get(requestRef)
+            val status = requestSnap.getString("status") ?: "pending"
+            if (status != "pending") {
+                throw IllegalStateException("La solicitud ya no está pendiente (status=$status)")
+            }
+
+            val fromSnapshot = tx.get(fromRef)
+            val toSnapshot = tx.get(toRef)
+
+            
             val sessionWriteSet = buildSessionWriteSet(
                 fromUid = fromUid,
                 fromRef = fromRef,
@@ -68,16 +75,19 @@ class FriendRequestRepository(
                 toSnapshot = toSnapshot
             )
 
-            transaction.update(requestRef, "status", "accepted")
-            transaction.update(fromRef, "friends", FieldValue.arrayUnion(toUid))
-            transaction.update(toRef, "friends", FieldValue.arrayUnion(fromUid))
 
-            applySessionWriteSet(transaction, sessionWriteSet)
+            applySessionWriteSet(tx, sessionWriteSet)
+
+
+            tx.update(requestRef, "status", "accepted")
+            tx.update(fromRef, "friends", FieldValue.arrayUnion(toUid))
+            tx.update(toRef, "friends", FieldValue.arrayUnion(fromUid))
 
             null
         }.addOnSuccessListener { onSuccess() }
             .addOnFailureListener(onFailure)
     }
+
 
     fun rejectRequest(
         requestId: String,
@@ -243,9 +253,18 @@ class FriendRequestRepository(
         writeSet: SessionWriteSet,
     ) {
         val sessionRootRef = sessionsCollection.document(writeSet.roomId)
-        val existingRoot = transaction.get(sessionRootRef)
-        val participants = writeSet.documents.keys.sorted()
 
+        // 1. 🔹 Lee todos los documentos primero
+        val existingRoot = transaction.get(sessionRootRef)
+        val participantSnapshots = writeSet.documents.keys.associateWith { ownerUid ->
+            val participantRef = sessionRootRef
+                .collection(SESSION_PARTICIPANT_COLLECTION)
+                .document(ownerUid)
+            participantRef to transaction.get(participantRef)
+        }
+
+        // 2. 🔹 Procesa los datos con base en los snapshots
+        val participants = writeSet.documents.keys.sorted()
         val rootData = mutableMapOf<String, Any>(
             "roomId" to writeSet.roomId,
             "participants" to participants,
@@ -262,30 +281,28 @@ class FriendRequestRepository(
             rootData[SESSION_REFRESH_COUNT_FIELD] = refreshCount + 1
         }
 
+        // 3. 🔹 Ahora sí haz los writes
         transaction.set(sessionRootRef, rootData, SetOptions.merge())
 
         writeSet.documents.forEach { (ownerUid, payload) ->
-            val participantRef = sessionRootRef
-                .collection(SESSION_PARTICIPANT_COLLECTION)
-                .document(ownerUid)
-            val existingParticipant = transaction.get(participantRef)
+            val (participantRef, existingParticipant) = participantSnapshots[ownerUid]!!
 
-            val data = mutableMapOf<String, Any?>()
-            data.putAll(payload)
-            data["ownerUid"] = ownerUid
-            data["updatedAt"] = FieldValue.serverTimestamp()
+            val data = mutableMapOf<String, Any?>().apply {
+                putAll(payload)
+                this["ownerUid"] = ownerUid
+                this["updatedAt"] = FieldValue.serverTimestamp()
 
-            if (!existingParticipant.exists()) {
-                data["createdAt"] = FieldValue.serverTimestamp()
-                data[SESSION_REFRESH_COUNT_FIELD] = 0L
-            } else {
-                val participantRefreshCount =
-                    existingParticipant.getLong(SESSION_REFRESH_COUNT_FIELD) ?: 0L
-                data[SESSION_REFRESH_COUNT_FIELD] = participantRefreshCount + 1
+                if (!existingParticipant.exists()) {
+                    this["createdAt"] = FieldValue.serverTimestamp()
+                    this[SESSION_REFRESH_COUNT_FIELD] = 0L
+                } else {
+                    val participantRefreshCount =
+                        existingParticipant.getLong(SESSION_REFRESH_COUNT_FIELD) ?: 0L
+                    this[SESSION_REFRESH_COUNT_FIELD] = participantRefreshCount + 1
+                }
             }
 
             data.entries.removeIf { it.value == null }
-
             transaction.set(participantRef, data, SetOptions.merge())
         }
 
@@ -296,10 +313,11 @@ class FriendRequestRepository(
                     "oneTimePreKeys" to update.remainingPreKeys,
                     "consumedOneTimePreKeys" to FieldValue.arrayUnion(update.consumedKeyId),
                     "lastPreKeyConsumedAt" to FieldValue.serverTimestamp(),
-                ),
+                )
             )
         }
     }
+
 
     private fun selectPreKeyForHandshake(
         fromUid: String,

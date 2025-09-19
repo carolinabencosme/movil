@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
 import com.example.texty.model.ChatRoom
+import com.example.texty.model.User
 import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
 import com.google.firebase.auth.FirebaseAuth
@@ -29,13 +30,18 @@ import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.UserRepository
-import com.google.firebase.firestore.ktx.firestore
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
     private lateinit var adapter: ChatListAdapter
     private lateinit var searchInput: TextInputEditText
     private var allRooms: List<ChatRoom> = emptyList()
+    private lateinit var recycler: RecyclerView
+    private lateinit var placeholder: TextView
+    private lateinit var progressBar: ProgressBar
+    private var cachedFriends: List<User>? = null
+    private var pendingRooms: List<ChatRoom>? = null
+    private val userRepository = UserRepository()
     private val chatRoomRepository = ChatRoomRepository()
 
     override fun onCreateView(
@@ -69,9 +75,9 @@ class ChatListFragment : Fragment() {
             startActivity(intent)
         }
 
-        val recycler = view.findViewById<RecyclerView>(R.id.recyclerChats)
-        val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
-        val placeholder = view.findViewById<TextView>(R.id.textPlaceholder)
+        recycler = view.findViewById(R.id.recyclerChats)
+        progressBar = view.findViewById(R.id.progressBar)
+        placeholder = view.findViewById(R.id.textPlaceholder)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
@@ -171,9 +177,9 @@ class ChatListFragment : Fragment() {
             }
         }
 
-        val recycler = view.findViewById<RecyclerView>(R.id.recyclerChats)
-        val progressBar = view.findViewById<ProgressBar>(R.id.progressBar)
-        val placeholder = view.findViewById<TextView>(R.id.textPlaceholder)
+        recycler = view.findViewById(R.id.recyclerChats)
+        progressBar = view.findViewById(R.id.progressBar)
+        placeholder = view.findViewById(R.id.textPlaceholder)
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
@@ -189,45 +195,60 @@ class ChatListFragment : Fragment() {
         }
 
         viewModel.rooms.observe(viewLifecycleOwner) { list ->
-            val uid = Firebase.auth.currentUser!!.uid
-
-            // Traer también la lista de amigos
-            UserRepository().getFriends(uid, onSuccess = { friends ->
-                // 🔹 Crear ChatRoom “virtual” para cada amigo
-                val friendRooms = friends.map { user ->
-                    ChatRoom(
-                        id = user.uid, // si no hay room aún, usamos el uid como id temporal
-                        participantIds = listOf(uid, user.uid),
-                        userNames = mapOf(
-                            uid to (Firebase.auth.currentUser?.displayName ?: "Yo"),
-                            user.uid to user.displayName
-                        ),
-                        isGroup = false,
-                        lastMessagePreview = null
-                    )
-                }
-
-                // 🔹 Combinar rooms reales (list) con amigos
-                val combined = (list + friendRooms).distinctBy { room ->
-                    if (room.isGroup) room.id else room.participantIds.sorted().joinToString("_")
-                }
-
-                allRooms = combined
-
-                if (allRooms.isEmpty()) {
-                    placeholder.visibility = View.VISIBLE
-                    recycler.visibility = View.GONE
-                } else {
-                    placeholder.visibility = View.GONE
-                    recycler.visibility = View.VISIBLE
-                    filterRooms(searchInput.text?.toString() ?: "")
-                }
-            }, onFailure = { e ->
-                AppLogger.logError(requireContext(), e)
-            })
+            val friends = cachedFriends
+            if (friends != null) {
+                pendingRooms = null
+                combineRoomsAndRender(list, friends)
+            } else {
+                pendingRooms = list
+            }
         }
 
+        loadFriends(currentUser.uid)
         viewModel.startListening(currentUser.uid)
+    }
+
+
+    private fun loadFriends(uid: String) {
+        userRepository.getFriends(uid, onSuccess = { friends ->
+            cachedFriends = friends
+            val currentRooms = pendingRooms ?: viewModel.rooms.value ?: emptyList()
+            pendingRooms = null
+            combineRoomsAndRender(currentRooms, friends)
+        }, onFailure = { e ->
+            AppLogger.logError(requireContext(), e)
+        })
+    }
+
+    private fun combineRoomsAndRender(rooms: List<ChatRoom>, friends: List<User>) {
+        val currentUid = Firebase.auth.currentUser?.uid ?: return
+        val friendRooms = friends.map { user ->
+            ChatRoom(
+                id = user.uid,
+                participantIds = listOf(currentUid, user.uid),
+                userNames = mapOf(
+                    currentUid to (Firebase.auth.currentUser?.displayName ?: "Yo"),
+                    user.uid to user.displayName
+                ),
+                isGroup = false,
+                lastMessagePreview = null
+            )
+        }
+
+        val combined = (rooms + friendRooms).distinctBy { room ->
+            if (room.isGroup) room.id else room.participantIds.sorted().joinToString("_")
+        }
+
+        allRooms = combined
+
+        if (allRooms.isEmpty()) {
+            placeholder.visibility = View.VISIBLE
+            recycler.visibility = View.GONE
+        } else {
+            placeholder.visibility = View.GONE
+            recycler.visibility = View.VISIBLE
+            filterRooms(searchInput.text?.toString() ?: "")
+        }
     }
 
 

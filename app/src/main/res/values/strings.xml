@@ -25,6 +25,7 @@
     <string name="profile_phone">Teléfono</string>
     <string name="change_password">Cambiar contraseña</string>
     <string name="password_reset_email_sent">Correo de restablecimiento enviado</string>
+    <string name="profile_saved_success">Perfil guardado</string>
     <string name="notifications">Notificaciones</string>
     <string name="enable_notifications">Recibir notificaciones</string>
     <string name="privacy">Privacidad</string>
@@ -40,4 +41,8 @@
     <string name="chat_message_image_preview">📷 Imagen cifrada</string>
     <string name="notification_generic_title">Nuevo mensaje</string>
     <string name="notification_generic_body">Tienes un mensaje nuevo</string>
+    <plurals name="notification_new_messages">
+        <item quantity="one">Tienes %d mensaje nuevo</item>
+        <item quantity="other">Tienes %d mensajes nuevos</item>
+    </plurals>
 </resources>

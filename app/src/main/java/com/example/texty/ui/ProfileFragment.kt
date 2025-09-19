@@ -77,44 +77,102 @@ class ProfileFragment : Fragment() {
         buttonEdit.setOnClickListener { pickImage.launch("image/*") }
 
         buttonSave.setOnClickListener {
-            val uid = user?.uid ?: return@setOnClickListener
+            val currentUser = user ?: return@setOnClickListener
+            val uid = currentUser.uid
+            buttonSave.isEnabled = false
+
             val name = nameInput.text.toString().trim()
             val about = aboutInput.text.toString().trim()
             val phone = phoneInput.text.toString().trim()
             val storageRef = Firebase.storage.reference.child("profileImages/$uid.jpg")
+
+            val previousProfile = currentProfile
+            val previousDisplayName = previousProfile?.displayName ?: currentUser.displayName
+            val previousAbout = previousProfile?.about
+            val previousPhone = previousProfile?.phone
+            val previousPhotoUri = previousProfile?.photoUrl?.takeIf { !it.isNullOrBlank() }?.let { Uri.parse(it) }
+                ?: currentUser.photoUrl
+
+            fun showErrorToast(message: String?) {
+                Toast.makeText(
+                    requireContext(),
+                    message ?: getString(R.string.error_generic),
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+
+            fun restorePreviousUI() {
+                nameInput.setText(previousDisplayName ?: "")
+                aboutInput.setText(previousAbout ?: "")
+                phoneInput.setText(previousPhone ?: "")
+                Glide.with(this)
+                    .load(previousPhotoUri)
+                    .placeholder(R.drawable.ic_person)
+                    .into(imageProfile)
+                imageUri = null
+            }
+
+            fun handleFailure(exception: Exception?) {
+                showErrorToast(exception?.localizedMessage)
+                restorePreviousUI()
+                buttonSave.isEnabled = true
+            }
 
             fun updateProfile(photoUri: Uri?) {
                 val profileUpdates = userProfileChangeRequest {
                     displayName = name
                     this.photoUri = photoUri
                 }
-                user.updateProfile(profileUpdates).addOnSuccessListener {
-                    val baseProfile = currentProfile ?: User(uid = uid)
-                    val profile = baseProfile.copy(
-                        uid = uid,
-                        displayName = name,
-                        photoUrl = photoUri?.toString() ?: baseProfile.photoUrl,
-                        isOnline = true,
-                        about = about,
-                        phone = phone,
-                    )
-                    currentProfile = profile
-                    Firebase.firestore.collection("users").document(uid).set(profile)
-                }
+                currentUser.updateProfile(profileUpdates)
+                    .addOnSuccessListener {
+                        val baseProfile = previousProfile ?: User(uid = uid)
+                        val profile = baseProfile.copy(
+                            uid = uid,
+                            displayName = name,
+                            photoUrl = photoUri?.toString() ?: baseProfile.photoUrl,
+                            isOnline = true,
+                            about = about,
+                            phone = phone,
+                        )
+                        Firebase.firestore.collection("users").document(uid).set(profile)
+                            .addOnSuccessListener {
+                                currentProfile = profile
+                                imageUri = null
+                                Toast.makeText(
+                                    requireContext(),
+                                    getString(R.string.profile_saved_success),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                            .addOnFailureListener { e ->
+                                handleFailure(e)
+                            }
+                            .addOnCompleteListener {
+                                buttonSave.isEnabled = true
+                            }
+                    }
+                    .addOnFailureListener { e ->
+                        handleFailure(e)
+                    }
             }
 
             val localImage = imageUri
             if (localImage != null) {
-                storageRef.putFile(localImage).continueWithTask { task ->
-                    if (!task.isSuccessful) {
-                        throw task.exception ?: Exception("Upload failed")
+                storageRef.putFile(localImage)
+                    .continueWithTask { task ->
+                        if (!task.isSuccessful) {
+                            throw task.exception ?: Exception("Upload failed")
+                        }
+                        storageRef.downloadUrl
                     }
-                    storageRef.downloadUrl
-                }.addOnSuccessListener { downloadUri ->
-                    updateProfile(downloadUri)
-                }
+                    .addOnSuccessListener { downloadUri ->
+                        updateProfile(downloadUri)
+                    }
+                    .addOnFailureListener { e ->
+                        handleFailure(e)
+                    }
             } else {
-                updateProfile(user.photoUrl)
+                updateProfile(currentUser.photoUrl)
             }
         }
 

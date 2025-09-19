@@ -61,7 +61,7 @@ class ChatListAdapter(
         val currentUid = Firebase.auth.currentUser?.uid
         val count = currentUid?.let { room.unreadCounts[it] } ?: 0
         holder.unreadCountText.apply {
-            text = count.toString()
+            text = if (count > 6) "6+" else count.toString()
             visibility = if (count > 0) View.VISIBLE else View.GONE
         }
 

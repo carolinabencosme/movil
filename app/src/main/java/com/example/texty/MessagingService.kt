@@ -30,13 +30,13 @@ class MessagingService : FirebaseMessagingService() {
   override fun onMessageReceived(message: RemoteMessage) {
     // --- Datos que pueden venir en el payload de data (desde la Cloud Function) ---
     val data = message.data
-    val chatId = data["roomId"] ?: data["chatId"]
+    val roomId = data["roomId"] ?: data["chatId"]
     val messageId = data["messageId"]
 
     val title = data["senderName"]
       ?: message.notification?.title
       ?: getString(R.string.notification_generic_title)
-    val body = getString(R.string.notification_generic_body)
+    val defaultBody = getString(R.string.notification_generic_body)
 
     // Si no podemos publicar notificaciones, salimos silenciosamente
     if (!canPostNotifications()) return
@@ -46,10 +46,10 @@ class MessagingService : FirebaseMessagingService() {
     val intent = Intent(this, MainActivity::class.java).apply {
       // TODO: si tienes ChatActivity, usa esa clase y pásale el chatId
       addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-      chatId?.let { putExtra("chatId", it) }
+      roomId?.let { putExtra("chatId", it) }
     }
 
-    val requestCode = (chatId?.hashCode() ?: 0)
+    val requestCode = (roomId?.hashCode() ?: 0)
     val pendingIntent = PendingIntent.getActivity(
       this,
       requestCode,
@@ -57,17 +57,33 @@ class MessagingService : FirebaseMessagingService() {
       PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
     )
 
-    val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+    val builder = NotificationCompat.Builder(this, CHANNEL_ID)
       .setSmallIcon(R.drawable.ic_chats) // Asegúrate de tener este drawable
       .setContentTitle(title)
-      .setContentText(body)
-      .setStyle(NotificationCompat.BigTextStyle().bigText(body))
       .setPriority(NotificationCompat.PRIORITY_HIGH)
       .setAutoCancel(true)
       .setContentIntent(pendingIntent)
-      .build()
 
-    val notifyId = messageId?.hashCode() ?: System.currentTimeMillis().toInt()
+    val notificationCounter = roomId?.let { NotificationCounter.getInstance(this).increment(it) }
+    val contentText = if (notificationCounter != null) {
+      resources.getQuantityString(
+        R.plurals.notification_new_messages,
+        notificationCounter,
+        notificationCounter,
+      )
+    } else {
+      defaultBody
+    }
+
+    builder
+      .setContentText(contentText)
+      .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
+
+    notificationCounter?.let { builder.setNumber(it) }
+
+    val notification = builder.build()
+
+    val notifyId = roomId?.hashCode() ?: messageId?.hashCode() ?: System.currentTimeMillis().toInt()
     try {
       NotificationManagerCompat.from(this).notify(notifyId, notification)
     } catch (se: SecurityException) {

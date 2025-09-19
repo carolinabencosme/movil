@@ -1,7 +1,9 @@
 package com.example.texty.repository
 
 import com.example.texty.model.User
+import com.google.android.gms.tasks.Tasks
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -38,7 +40,7 @@ class UserRepository(private val firestore: FirebaseFirestore = Firebase.firesto
     }
 
     fun getFriends(uid: String, onSuccess: (List<User>) -> Unit, onFailure: (Exception) -> Unit) {
-        Firebase.firestore.collection("users").document(uid).get()
+        usersCollection.document(uid).get()
             .addOnSuccessListener { snapshot ->
                 val friendIds = snapshot.get("friends") as? List<String> ?: emptyList()
                 if (friendIds.isEmpty()) {
@@ -46,11 +48,16 @@ class UserRepository(private val firestore: FirebaseFirestore = Firebase.firesto
                     return@addOnSuccessListener
                 }
 
-                Firebase.firestore.collection("users")
-                    .whereIn("uid", friendIds)
-                    .get()
-                    .addOnSuccessListener { result ->
-                        val users = result.toObjects(User::class.java)
+                val friendIdChunks = friendIds.chunked(10)
+                val tasks = friendIdChunks.map { chunk ->
+                    usersCollection.whereIn("uid", chunk).get()
+                }
+
+                Tasks.whenAllSuccess<QuerySnapshot>(tasks)
+                    .addOnSuccessListener { snapshots ->
+                        val users = snapshots
+                            .flatMap { it.toObjects(User::class.java) }
+                            .distinctBy { it.uid }
                         onSuccess(users)
                     }
                     .addOnFailureListener(onFailure)

@@ -1,13 +1,15 @@
 package com.example.texty.ui
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Button
-import android.widget.EditText
-import android.widget.Toast
+import android.view.View
+import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.collection.LruCache
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -26,18 +28,14 @@ import com.example.texty.util.MessageCrypto
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.FieldValue
-import com.google.firebase.firestore.ListenerRegistration
-import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.CollectionReference
-import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
-import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import java.util.UUID
 
 class ChatActivity : AppCompatActivity() {
@@ -56,6 +54,10 @@ class ChatActivity : AppCompatActivity() {
   private var recipientName: String? = null
   private var groupName: String? = null
   private var participantIds: List<String> = emptyList()
+  private var triedAutoResync = false
+  private val imageCache = object : LruCache<String, Bitmap>(20) {}
+  private val MAX_DOWNLOAD_BYTES = 10L * 1024 * 1024 // 10 MB
+
 
   private val sessionKeyRepository = SessionKeyRepository()
   private var sessionKeyInfo: SessionKeyInfo? = null
@@ -67,15 +69,13 @@ class ChatActivity : AppCompatActivity() {
     val currentUser = Firebase.auth.currentUser ?: return@registerForActivityResult
     val activeRoomId = roomId ?: return@registerForActivityResult
     if (uri != null) {
-      val targetRecipientUid = recipientUid
-      val targetRecipientName = recipientName
       sendImageMessage(
         roomId = activeRoomId,
         currentUid = currentUser.uid,
         imageUri = uri,
         isGroup = isGroup,
-        recipientUid = targetRecipientUid,
-        recipientName = targetRecipientName
+        recipientUid = recipientUid,
+        recipientName = recipientName
       )
     }
   }
@@ -83,8 +83,7 @@ class ChatActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
-    val auth = Firebase.auth
-    val currentUser = auth.currentUser
+    val currentUser = Firebase.auth.currentUser
     if (currentUser == null) {
       startActivity(Intent(this, LoginActivity::class.java))
       finish()
@@ -94,33 +93,22 @@ class ChatActivity : AppCompatActivity() {
     isGroup = intent.getBooleanExtra("isGroup", false)
 
     if (isGroup) {
-      // Datos de grupo
       roomId = intent.getStringExtra("roomId")
       groupName = intent.getStringExtra("groupName")
-
       if (roomId.isNullOrBlank()) {
-        val error = IllegalArgumentException("roomId extra is missing or blank")
-        AppLogger.logError(this, error)
-        ErrorLogger.log(this, error)
-        finish()
-        return
+        val e = IllegalArgumentException("roomId extra is missing or blank")
+        AppLogger.logError(this, e); ErrorLogger.log(this, e)
+        finish(); return
       }
-
       initChat(currentUser.uid, null, groupName ?: "Grupo sin nombre", true)
-
     } else {
-      // Datos de chat privado
       recipientUid = intent.getStringExtra("recipientUid")
       recipientName = intent.getStringExtra("recipientName")
-
       if (recipientUid.isNullOrBlank() || recipientName.isNullOrBlank()) {
-        val error = IllegalArgumentException("recipientUid o recipientName extra faltante")
-        AppLogger.logError(this, error)
-        ErrorLogger.log(this, error)
-        finish()
-        return
+        val e = IllegalArgumentException("recipientUid o recipientName extra faltante")
+        AppLogger.logError(this, e); ErrorLogger.log(this, e)
+        finish(); return
       }
-
       FriendRequestRepository().areFriends(currentUser.uid, recipientUid!!) { isFriend ->
         if (isFriend) {
           initChat(currentUser.uid, recipientUid!!, recipientName!!, false)
@@ -132,7 +120,7 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
-  private fun initChat(currentUid: String, recipientUid: String?, title: String, isGroupChat: Boolean) {
+  private fun initChat(currentUid: String, peerUid: String?, title: String, isGroupChat: Boolean) {
     setContentView(R.layout.activity_chat)
 
     val sendImageButton = findViewById<MaterialButton>(R.id.buttonSendImage)
@@ -145,43 +133,43 @@ class ChatActivity : AppCompatActivity() {
     messageInput = findViewById(R.id.editMessage)
     sendButton = findViewById(R.id.buttonSend)
 
-    adapter = ChatAdapter(currentUid)
-    recyclerView.layoutManager = LinearLayoutManager(this).apply {
-      stackFromEnd = true
+    //adapter = ChatAdapter(currentUid)
+    adapter = ChatAdapter(currentUid) { msg, iv, tv ->
+      bindAttachment(msg, iv, tv)
     }
+    recyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
     recyclerView.adapter = adapter
 
     val resolvedRoomId = if (isGroupChat) {
-      roomId ?: throw IllegalStateException("roomId must be set for group chats")
+      roomId ?: error("roomId must be set for group chats")
     } else {
-      listOf(currentUid, recipientUid!!).sorted().joinToString("_")
+      listOf(currentUid, peerUid!!).sorted().joinToString("_")
     }
+    // ---- set refs UNA sola vez ----
     roomId = resolvedRoomId
     NotificationCounter.getInstance(applicationContext).clear(resolvedRoomId)
     NotificationManagerCompat.from(this).cancel(resolvedRoomId.hashCode())
     roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
     messagesRef = roomRef.collection("messages")
+    // reset del flag de auto-resync aqui
+    triedAutoResync = false
+    // --------------------------------
 
+    // Deshabilita UI hasta tener sesión
     sendButton.isEnabled = false
     sendImageButton.isEnabled = false
-
     sendImageButton.setOnClickListener { pickImageLauncher.launch("image/*") }
 
     lifecycleScope.launch {
-      participantIds = resolveParticipantIds(
-        isGroupChat = isGroupChat,
-        currentUid = currentUid,
-        peerUid = recipientUid,
-      )
-
+      participantIds = resolveParticipantIds(isGroupChat, currentUid, peerUid)
       purgeLegacyLastMessageField()
 
-      val sessionInfo = loadSessionInfo(
-        roomId = resolvedRoomId,
-        ownerUid = currentUid,
-        isGroup = isGroupChat,
-        peerUid = recipientUid
-      )
+      // Asegura sesión válida
+      val sessionInfo = if (isGroupChat) {
+        loadSessionInfo(resolvedRoomId, currentUid, true, null)
+      } else {
+        ensureSessionForDirectChat(currentUid, peerUid!!)
+      }
       sessionKeyInfo = sessionInfo
       messageMapper = MessageMapper(sessionInfo)
 
@@ -192,19 +180,15 @@ class ChatActivity : AppCompatActivity() {
       sendButton.isEnabled = true
       sendImageButton.isEnabled = true
 
-      try {
-        roomRef.update("unreadCounts.$currentUid", 0).await()
-      } catch (_: Exception) {
-        // Ignore failures when resetting unread counts.
-      }
+      try { roomRef.update("unreadCounts.$currentUid", 0).await() } catch (_: Exception) {}
 
+      // Arranca el listener después de tener sessionKeyInfo y messageMapper
       startMessageListener(currentUid, resolvedRoomId)
     }
 
     sendButton.setOnClickListener {
       val text = messageInput.text.toString().trim()
       if (text.isEmpty()) return@setOnClickListener
-
       lifecycleScope.launch {
         sendEncryptedMessage(
           body = MessageBody(text = text),
@@ -212,61 +196,111 @@ class ChatActivity : AppCompatActivity() {
           preview = text,
           currentUid = currentUid,
           isGroupChat = isGroupChat,
-          recipientUid = recipientUid,
+          recipientUid = peerUid,
           title = title,
         )
       }
     }
   }
 
+
+  private suspend fun ensureSessionForDirectChat(currentUid: String, peerUid: String): SessionKeyInfo? {
+    val rid = roomId ?: listOf(currentUid, peerUid).sorted().joinToString("_")
+    var info = loadSessionInfo(rid, currentUid, false, peerUid)
+
+    if (info?.rootKey == null || info.requiresReauth) {
+      try {
+        refreshSessionAwait(currentUid, peerUid)
+        info = loadSessionInfo(rid, currentUid, false, peerUid)
+        if (info?.rootKey == null) {
+          delay(250) // pequeño margen para que persista participants/{ownerUid}
+          info = loadSessionInfo(rid, currentUid, false, peerUid)
+        }
+      } catch (e: Exception) {
+        AppLogger.logError(this, e); ErrorLogger.log(this, e)
+      }
+    }
+    return info
+  }
+
+
+  // Envuelve FriendRequestRepository.refreshSession en una función suspend.
+  private suspend fun refreshSessionAwait(currentUid: String, peerUid: String) =
+    suspendCancellableCoroutine<Unit> { cont ->
+      FriendRequestRepository().refreshSession(
+        requesterUid = currentUid,
+        peerUid = peerUid,
+        onSuccess = { if (cont.isActive) cont.resume(Unit) },
+        onFailure = { e -> if (cont.isActive) cont.resumeWithException(e) }
+      )
+    }
+
   private suspend fun loadSessionInfo(
     roomId: String,
     ownerUid: String,
     isGroup: Boolean,
     peerUid: String?,
-  ): SessionKeyInfo? {
-    return try {
-      sessionKeyRepository.loadSessionKey(
-        roomId = roomId,
-        ownerUid = ownerUid,
-        isGroup = isGroup,
-        peerUid = peerUid,
-      )
-    } catch (error: Exception) {
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
-      null
-    }
+  ): SessionKeyInfo? = try {
+    sessionKeyRepository.loadSessionKey(roomId, ownerUid, isGroup, peerUid)
+  } catch (e: Exception) {
+    AppLogger.logError(this, e); ErrorLogger.log(this, e); null
   }
 
-  private fun startMessageListener(currentUid: String, resolvedRoomId: String) {
-    if (::listenerRegistration.isInitialized) {
-      listenerRegistration.remove()
+    private fun startMessageListener(currentUid: String, resolvedRoomId: String) {
+        if (::listenerRegistration.isInitialized) {
+            listenerRegistration.remove()
+        }
+
+        listenerRegistration =
+            messagesRef.orderBy("createdAt").addSnapshotListener { value, error ->
+                if (error != null) {
+                    AppLogger.logError(this, error)
+                    return@addSnapshotListener
+                }
+
+                val mapper = messageMapper ?: return@addSnapshotListener
+                val docs = value?.documents ?: return@addSnapshotListener
+                val mapped = docs.mapNotNull { mapper.map(it) }
+
+                adapter.submitList(mapped.map { it.message })
+                if (adapter.itemCount > 0) {
+                    recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
+                }
+
+                // === AUTO-RESYNC: si alguno pide resincronizar, intenta negociar sesión y remapear ===
+                val needResync = mapped.any { it.message.requiresKeyResync }
+                if (needResync && !isGroup && !triedAutoResync) {
+                    triedAutoResync = true
+                    val me = Firebase.auth.currentUser?.uid ?: return@addSnapshotListener
+                    val peer = recipientUid ?: return@addSnapshotListener
+
+                    lifecycleScope.launch {
+                        val newInfo = ensureSessionForDirectChat(me, peer)
+                        if (newInfo?.rootKey != null) {
+                            sessionKeyInfo = newInfo
+                            messageMapper = MessageMapper(newInfo)
+                            // Remapea inmediatamente con la nueva sesión
+                            val remapped = docs.mapNotNull { messageMapper?.map(it) }
+                            adapter.submitList(remapped.map { it.message })
+                            if (adapter.itemCount > 0) {
+                                recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
+                            }
+                        } else {
+                            Toast.makeText(
+                                this@ChatActivity,
+                                R.string.chat_session_requires_resync,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
+                }
+                // === FIN AUTO-RESYNC ===
+
+                // Read receipts
+                lifecycleScope.launch(Dispatchers.IO) { updateReadReceipts(mapped, currentUid) }
+            }
     }
 
-    listenerRegistration =
-      messagesRef.orderBy("createdAt").addSnapshotListener { value, error ->
-        if (error != null) {
-          AppLogger.logError(this, error)
-          return@addSnapshotListener
-        }
-
-        val mapper = messageMapper ?: return@addSnapshotListener
-        val documents = value?.documents ?: return@addSnapshotListener
-        val mapped = documents.mapNotNull { mapper.map(it) }
-
-        adapter.submitList(mapped.map { it.message })
-        if (adapter.itemCount > 0) {
-          recyclerView.post {
-            recyclerView.smoothScrollToPosition(adapter.itemCount - 1)
-          }
-        }
-
-        lifecycleScope.launch(Dispatchers.IO) {
-          updateReadReceipts(mapped, currentUid)
-        }
-      }
-  }
 
   private suspend fun updateReadReceipts(
     documents: List<MessageMapper.MessageDocument>,
@@ -277,28 +311,17 @@ class ChatActivity : AppCompatActivity() {
     if (unread.isEmpty()) return
 
     val batch = Firebase.firestore.batch()
-    var operations = 0
-    unread.forEach { document ->
-      val update = mapper.buildReadReceiptUpdate(document, currentUid)
-      if (update != null) {
-        batch.set(document.snapshot.reference, update.first, update.second)
-        operations++
-      }
+    var ops = 0
+    unread.forEach { doc ->
+      val update = mapper.buildReadReceiptUpdate(doc, currentUid)
+      if (update != null) { batch.set(doc.snapshot.reference, update.first, update.second); ops++ }
     }
-
-    if (operations == 0) return
-
+    if (ops == 0) return
     batch.update(roomRef, mapOf("unreadCounts.$currentUid" to 0))
 
-    try {
-      batch.commit().await()
-      roomId?.let {
-        NotificationCounter.getInstance(applicationContext).clear(it)
-        NotificationManagerCompat.from(this).cancel(it.hashCode())
-      }
-    } catch (error: Exception) {
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
+    try { batch.commit().await() } catch (e: Exception) {
+      AppLogger.logError(this, e); ErrorLogger.log(this, e)
+
     }
   }
 
@@ -326,12 +349,9 @@ class ChatActivity : AppCompatActivity() {
     )
 
     val encryptionResult = try {
-      withContext(Dispatchers.Default) {
-        MessageCrypto.encrypt(sessionInfo, body, metadata)
-      }
-    } catch (error: Exception) {
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
+      withContext(Dispatchers.Default) { MessageCrypto.encrypt(sessionInfo, body, metadata) }
+    } catch (e: Exception) {
+      AppLogger.logError(this, e); ErrorLogger.log(this, e)
       Toast.makeText(this, R.string.chat_message_encrypt_error, Toast.LENGTH_SHORT).show()
       return
     }
@@ -350,22 +370,20 @@ class ChatActivity : AppCompatActivity() {
     )
 
     val sanitizedPreview = preview.take(SUMMARY_MAX_LENGTH)
-
-    val roomData = if (isGroupChat) {
-      mutableMapOf<String, Any>(
-        "updatedAt" to FieldValue.serverTimestamp(),
-      )
-    } else {
-      val peerUid = recipientUid ?: return
-      mutableMapOf<String, Any>(
-        "participantIds" to listOf(currentUid, peerUid),
-        "userNames" to mapOf(
-          currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
-          peerUid to title,
-        ),
-        "updatedAt" to FieldValue.serverTimestamp(),
-      )
-    }
+    val roomData: MutableMap<String, Any> =
+      if (isGroupChat) {
+        mutableMapOf("updatedAt" to FieldValue.serverTimestamp())
+      } else {
+        val peerUid = recipientUid ?: return
+        mutableMapOf(
+          "participantIds" to listOf(currentUid, peerUid),
+          "userNames" to mapOf(
+            currentUid to (Firebase.auth.currentUser?.displayName ?: ""),
+            peerUid to title
+          ),
+          "updatedAt" to FieldValue.serverTimestamp(),
+        )
+      }
 
     roomData["lastMessage"] = FieldValue.delete()
 
@@ -374,18 +392,14 @@ class ChatActivity : AppCompatActivity() {
         roomRef.set(roomData, SetOptions.merge()).await()
         messagesRef.add(messageData).await()
       }
-    } catch (error: Exception) {
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
+    } catch (e: Exception) {
+      AppLogger.logError(this, e); ErrorLogger.log(this, e)
       Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
       return
     }
 
-    val summaryParticipants = if (participantIds.isNotEmpty()) {
-      participantIds
-    } else {
-      listOfNotNull(currentUid, recipientUid)
-    }
+    val summaryParticipants = if (participantIds.isNotEmpty()) participantIds
+    else listOfNotNull(currentUid, recipientUid)
 
     if (sanitizedPreview.isNotEmpty()) {
       try {
@@ -396,28 +410,20 @@ class ChatActivity : AppCompatActivity() {
           senderId = currentUid,
           messageType = messageType,
         )
-      } catch (error: Exception) {
-        AppLogger.logError(this, error)
-        ErrorLogger.log(this, error)
+      } catch (e: Exception) {
+        AppLogger.logError(this, e); ErrorLogger.log(this, e)
       }
     }
 
-    if (messageType == MESSAGE_TYPE_TEXT) {
-      messageInput.text?.clear()
-    }
+    if (messageType == MESSAGE_TYPE_TEXT) messageInput.text?.clear()
   }
 
   override fun onDestroy() {
-    if (::listenerRegistration.isInitialized) {
-      listenerRegistration.remove()
-    }
+    if (::listenerRegistration.isInitialized) listenerRegistration.remove()
     super.onDestroy()
   }
 
-  override fun onSupportNavigateUp(): Boolean {
-    finish()
-    return true
-  }
+  override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
   private fun sendImageMessage(
     roomId: String,
@@ -441,44 +447,30 @@ class ChatActivity : AppCompatActivity() {
       val encryptedAttachment = try {
         withContext(Dispatchers.IO) {
           val inputStream = contentResolver.openInputStream(imageUri)
-          val plainBytes = inputStream?.use { it.readBytes() }
-          if (plainBytes == null) {
-            null
-          } else {
-            try {
-              AttachmentCrypto.encryptAttachment(sessionInfo, plainBytes, storagePath, mimeType)
-            } finally {
-              plainBytes.fill(0)
-            }
-          }
+          val plain = inputStream?.use { it.readBytes() }
+          if (plain == null) null else try {
+            AttachmentCrypto.encryptAttachment(sessionInfo, plain, storagePath, mimeType)
+          } finally { plain?.fill(0) }
         }
-      } catch (error: Exception) {
-        AppLogger.logError(this@ChatActivity, error)
-        ErrorLogger.log(this@ChatActivity, error)
+      } catch (e: Exception) {
+        AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
         Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
         return@launch
-      }
-
-      if (encryptedAttachment == null) {
+      } ?: run {
         Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
         return@launch
       }
 
       try {
         withContext(Dispatchers.IO) {
-          Firebase.storage.reference
-            .child(encryptedAttachment.storagePath)
-            .putBytes(encryptedAttachment.ciphertext)
-            .await()
+          Firebase.storage.reference.child(encryptedAttachment.storagePath)
+            .putBytes(encryptedAttachment.ciphertext).await()
         }
-      } catch (error: Exception) {
-        AppLogger.logError(this@ChatActivity, error)
-        ErrorLogger.log(this@ChatActivity, error)
+      } catch (e: Exception) {
+        AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
         Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
         return@launch
-      } finally {
-        encryptedAttachment.clearCiphertext()
-      }
+      } finally { encryptedAttachment.clearCiphertext() }
 
       val body = MessageBody(
         attachmentMimeType = mimeType,
@@ -501,27 +493,62 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  private fun bindAttachment(
+    message: com.example.texty.model.Message,
+    imageView: ImageView,
+    messageText: TextView
+  ) {
+    val body = message.decrypted?.body ?: return
+    val mime = body.attachmentMimeType ?: return
+    if (!mime.startsWith("image")) return
+
+    val storagePath = body.attachmentStoragePath ?: return
+
+    imageCache.get(storagePath)?.let { bmp ->
+      imageView.setImageBitmap(bmp)
+      imageView.visibility = View.VISIBLE
+      messageText.visibility = View.GONE
+      return
+    }
+
+    lifecycleScope.launch {
+      try {
+        val session = sessionKeyInfo ?: return@launch
+
+        // 🔹 Construir metadatos y descifrar usando la API correcta
+        val metadata = AttachmentCrypto.extractMetadata(body) ?: return@launch
+        val plainBytes = withContext(Dispatchers.IO) {
+          AttachmentCrypto.downloadAndDecryptAttachment(metadata, session)
+        }
+
+        val bmp = withContext(Dispatchers.Default) {
+          BitmapFactory.decodeByteArray(plainBytes, 0, plainBytes.size)
+        } ?: return@launch
+
+        imageCache.put(storagePath, bmp)
+        imageView.setImageBitmap(bmp)
+        imageView.visibility = View.VISIBLE
+        messageText.visibility = View.GONE
+      } catch (e: Exception) {
+        AppLogger.logError(this@ChatActivity, e)
+        // Si falla, dejamos el placeholder de texto
+      }
+    }
+  }
+
   private suspend fun resolveParticipantIds(
     isGroupChat: Boolean,
     currentUid: String,
     peerUid: String?,
   ): List<String> {
-    if (!isGroupChat) {
-      return listOfNotNull(currentUid, peerUid).distinct()
-    }
-
+    if (!isGroupChat) return listOfNotNull(currentUid, peerUid).distinct()
     return try {
-      val snapshot = withContext(Dispatchers.IO) { roomRef.get().await() }
-      val ids = (snapshot.get("participantIds") as? List<*>)
-        ?.mapNotNull { it as? String }
-        ?.filter { it.isNotBlank() }
-        ?.distinct()
-        .orEmpty()
+      val snap = withContext(Dispatchers.IO) { roomRef.get().await() }
+      val ids = (snap.get("participantIds") as? List<*>)?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }?.distinct().orEmpty()
       if (ids.isEmpty()) listOf(currentUid) else ids
-    } catch (error: Exception) {
-      AppLogger.logError(this, error)
-      ErrorLogger.log(this, error)
-      listOf(currentUid)
+    } catch (e: Exception) {
+      AppLogger.logError(this, e); ErrorLogger.log(this, e); listOf(currentUid)
     }
   }
 
@@ -530,9 +557,7 @@ class ChatActivity : AppCompatActivity() {
       withContext(Dispatchers.IO) {
         roomRef.set(mapOf("lastMessage" to FieldValue.delete()), SetOptions.merge()).await()
       }
-    } catch (_: Exception) {
-      // Cleanup is best-effort; failures will be retried on the next sync.
-    }
+    } catch (_: Exception) {}
   }
 
   private suspend fun updateEncryptedSummaries(
@@ -542,41 +567,39 @@ class ChatActivity : AppCompatActivity() {
     senderId: String,
     messageType: String,
   ) {
-    val distinctParticipants = participants.filter { it.isNotBlank() }.distinct()
-    if (distinctParticipants.isEmpty()) return
+    val distinct = participants.filter { it.isNotBlank() }.distinct()
+    if (distinct.isEmpty()) return
 
     val encryptedSummaries = withContext(Dispatchers.Default) {
-      distinctParticipants.map { uid ->
-        val metadata = MessageCrypto.EncryptionMetadata(
+      distinct.map { uid ->
+        val meta = MessageCrypto.EncryptionMetadata(
           senderId = senderId,
           messageType = SUMMARY_MESSAGE_PREFIX + messageType,
           readBy = listOf(uid),
           schemeVersion = sessionInfo.schemeVersion,
           encryptionTarget = sessionInfo.encryptionTarget,
         )
-        val result = MessageCrypto.encrypt(sessionInfo, MessageBody(text = previewText), metadata)
-        SummaryEncryption(uid = uid, metadata = metadata, result = result)
+        val res = MessageCrypto.encrypt(sessionInfo, MessageBody(text = previewText), meta)
+        SummaryEncryption(uid = uid, metadata = meta, result = res)
       }
     }
 
     withContext(Dispatchers.IO) {
-      encryptedSummaries.forEach { summary ->
-        val payload = summary.result.payload
+      encryptedSummaries.forEach { s ->
+        val p = s.result.payload
         val data = hashMapOf<String, Any>(
-          "summaryCiphertext" to payload.ciphertext,
-          "summaryNonce" to payload.nonce,
-          "summarySalt" to payload.salt,
-          "summarySchemeVersion" to payload.schemeVersion,
-          "summaryEncryptionTarget" to payload.encryptionTarget,
-          "summaryMessageType" to summary.metadata.messageType,
-          "summarySenderId" to summary.metadata.senderId,
-          "summaryReadBy" to summary.metadata.readBy,
+          "summaryCiphertext" to p.ciphertext,
+          "summaryNonce" to p.nonce,
+          "summarySalt" to p.salt,
+          "summarySchemeVersion" to p.schemeVersion,
+          "summaryEncryptionTarget" to p.encryptionTarget,
+          "summaryMessageType" to s.metadata.messageType,
+          "summarySenderId" to s.metadata.senderId,
+          "summaryReadBy" to s.metadata.readBy,
           "updatedAt" to FieldValue.serverTimestamp(),
         )
-        roomRef.collection("userState")
-          .document(summary.uid)
-          .set(data, SetOptions.merge())
-          .await()
+        roomRef.collection("userState").document(s.uid)
+          .set(data, SetOptions.merge()).await()
       }
     }
   }

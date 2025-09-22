@@ -1,6 +1,7 @@
 package com.example.texty.repository
 
 import android.util.Base64
+import com.google.firebase.auth.ktx.auth
 import com.example.texty.model.FriendRequest
 import com.example.texty.model.KeyBundle
 import com.example.texty.model.OneTimePreKeyInfo
@@ -14,13 +15,14 @@ import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Transaction
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
 
-/**
- * Repository handling friend request operations.
- */
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
@@ -43,6 +45,7 @@ class FriendRequestRepository(
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener(onFailure)
     }
+
     fun acceptRequest(
         requestId: String,
         fromUid: String,
@@ -55,7 +58,6 @@ class FriendRequestRepository(
         val toRef = usersCollection.document(toUid)
 
         firestore.runTransaction { tx ->
-
             val requestSnap = tx.get(requestRef)
             val status = requestSnap.getString("status") ?: "pending"
             if (status != "pending") {
@@ -65,8 +67,7 @@ class FriendRequestRepository(
             val fromSnapshot = tx.get(fromRef)
             val toSnapshot = tx.get(toRef)
 
-            
-            val sessionWriteSet = buildSessionWriteSet(
+            val writeSet = buildSessionWriteSet(
                 fromUid = fromUid,
                 fromRef = fromRef,
                 fromSnapshot = fromSnapshot,
@@ -75,19 +76,20 @@ class FriendRequestRepository(
                 toSnapshot = toSnapshot
             )
 
-
-            applySessionWriteSet(tx, sessionWriteSet)
-
+            // Escribimos SOLO root (si falta) y consumo de prekeys
+            applySessionWriteSet(tx, writeSet)
 
             tx.update(requestRef, "status", "accepted")
             tx.update(fromRef, "friends", FieldValue.arrayUnion(toUid))
             tx.update(toRef, "friends", FieldValue.arrayUnion(fromUid))
 
-            null
-        }.addOnSuccessListener { onSuccess() }
-            .addOnFailureListener(onFailure)
+            // Devolvemos los datos para persistir claves fuera de la transacción
+            writeSet
+        }.addOnSuccessListener { writeSet ->
+            persistSessionKeys(writeSet)
+            onSuccess()
+        }.addOnFailureListener(onFailure)
     }
-
 
     fun rejectRequest(
         requestId: String,
@@ -108,11 +110,11 @@ class FriendRequestRepository(
         val requesterRef = usersCollection.document(requesterUid)
         val peerRef = usersCollection.document(peerUid)
 
-        firestore.runTransaction { transaction ->
-            val requesterSnapshot = transaction.get(requesterRef)
-            val peerSnapshot = transaction.get(peerRef)
+        firestore.runTransaction { tx ->
+            val requesterSnapshot = tx.get(requesterRef)
+            val peerSnapshot = tx.get(peerRef)
 
-            val sessionWriteSet = buildSessionWriteSet(
+            val writeSet = buildSessionWriteSet(
                 fromUid = requesterUid,
                 fromRef = requesterRef,
                 fromSnapshot = requesterSnapshot,
@@ -121,11 +123,12 @@ class FriendRequestRepository(
                 toSnapshot = peerSnapshot
             )
 
-            applySessionWriteSet(transaction, sessionWriteSet)
-
-            null
-        }.addOnSuccessListener { onSuccess() }
-            .addOnFailureListener(onFailure)
+            applySessionWriteSet(tx, writeSet)
+            writeSet
+        }.addOnSuccessListener { writeSet ->
+            persistSessionKeys(writeSet)
+            onSuccess()
+        }.addOnFailureListener(onFailure)
     }
 
     fun areFriends(uid1: String, uid2: String, onResult: (Boolean) -> Unit) {
@@ -171,6 +174,8 @@ class FriendRequestRepository(
             }
             .addOnFailureListener { onResult(null) }
     }
+
+    // ---------- Handshake helpers ----------
 
     private fun buildSessionWriteSet(
         fromUid: String,
@@ -254,16 +259,7 @@ class FriendRequestRepository(
     ) {
         val sessionRootRef = sessionsCollection.document(writeSet.roomId)
 
-        // 1. 🔹 Lee todos los documentos primero
         val existingRoot = transaction.get(sessionRootRef)
-        val participantSnapshots = writeSet.documents.keys.associateWith { ownerUid ->
-            val participantRef = sessionRootRef
-                .collection(SESSION_PARTICIPANT_COLLECTION)
-                .document(ownerUid)
-            participantRef to transaction.get(participantRef)
-        }
-
-        // 2. 🔹 Procesa los datos con base en los snapshots
         val participants = writeSet.documents.keys.sorted()
         val rootData = mutableMapOf<String, Any>(
             "roomId" to writeSet.roomId,
@@ -281,31 +277,9 @@ class FriendRequestRepository(
             rootData[SESSION_REFRESH_COUNT_FIELD] = refreshCount + 1
         }
 
-        // 3. 🔹 Ahora sí haz los writes
         transaction.set(sessionRootRef, rootData, SetOptions.merge())
 
-        writeSet.documents.forEach { (ownerUid, payload) ->
-            val (participantRef, existingParticipant) = participantSnapshots[ownerUid]!!
-
-            val data = mutableMapOf<String, Any?>().apply {
-                putAll(payload)
-                this["ownerUid"] = ownerUid
-                this["updatedAt"] = FieldValue.serverTimestamp()
-
-                if (!existingParticipant.exists()) {
-                    this["createdAt"] = FieldValue.serverTimestamp()
-                    this[SESSION_REFRESH_COUNT_FIELD] = 0L
-                } else {
-                    val participantRefreshCount =
-                        existingParticipant.getLong(SESSION_REFRESH_COUNT_FIELD) ?: 0L
-                    this[SESSION_REFRESH_COUNT_FIELD] = participantRefreshCount + 1
-                }
-            }
-
-            data.entries.removeIf { it.value == null }
-            transaction.set(participantRef, data, SetOptions.merge())
-        }
-
+        // Consumir/actualizar prekeys del dueño correspondiente
         writeSet.preKeyUpdate?.let { update ->
             transaction.update(
                 update.ownerRef,
@@ -318,6 +292,47 @@ class FriendRequestRepository(
         }
     }
 
+    /** Persiste participants/{uid} con rootKey, versión, peerUid, etc. (fuera de la transacción).
+     *  ⚠️ No sobrescribir rootKeyMaterial si ya existe (para conservar el historial). */
+    private fun persistSessionKeys(writeSet: SessionWriteSet) {
+        val repo = SessionKeyRepository(firestore)
+        CoroutineScope(Dispatchers.IO).launch {
+            val currentUid = Firebase.auth.currentUser?.uid ?: return@launch
+
+            writeSet.documents.forEach { (ownerUid, payload) ->
+                // ⚠️ Solo persisto MI doc; NO toco el del peer
+                if (ownerUid != currentUid) return@forEach
+
+                val roomId = writeSet.roomId
+                val participantRef = firestore.collection("sessions")
+                    .document(roomId)
+                    .collection(SESSION_PARTICIPANT_COLLECTION)
+                    .document(ownerUid)
+
+                val snap = try { participantRef.get().await() } catch (_: Exception) { null }
+                val existing = snap?.getString("rootKeyMaterial")
+
+                val newB64 = payload["rootKeyMaterial"] as? String ?: return@forEach
+                val peerUid = payload["peerUid"] as? String ?: return@forEach
+
+                // ✅ Si ya hay clave, no la sobrescribo
+                if (!existing.isNullOrBlank()) return@forEach
+
+                try {
+                    val rootKey = android.util.Base64.decode(newB64, android.util.Base64.NO_WRAP)
+                    repo.saveSessionKey(
+                        roomId = roomId,
+                        ownerUid = ownerUid,
+                        peerUid = peerUid,
+                        rootKey = rootKey,
+                        schemeVersion = SESSION_PROTOCOL_VERSION
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        }
+    }
 
     private fun selectPreKeyForHandshake(
         fromUid: String,
@@ -339,7 +354,6 @@ class FriendRequestRepository(
                 remainingPreKeys = remaining,
             )
         }
-
         val fallback = fromUser.oneTimePreKeys.firstOrNull()
         if (fallback != null) {
             val remaining = fromUser.oneTimePreKeys.filterNot { it.keyId == fallback.keyId }
@@ -350,7 +364,6 @@ class FriendRequestRepository(
                 remainingPreKeys = remaining,
             )
         }
-
         return null
     }
 
@@ -382,13 +395,15 @@ class FriendRequestRepository(
             "peerUid" to peerUid,
             "peerBundle" to peerBundleMap,
             "peerBundleFingerprint" to fingerprintBundle(peerBundle),
+
+            // 🔐 Raíz ESTABLE: NO depende de prekeys consumidos
             "rootKeyMaterial" to deriveRootKeyMaterial(
                 ownerUid = ownerUid,
                 ownerBundle = ownerBundle,
                 peerUid = peerUid,
                 peerBundle = peerBundle,
-                consumedPreKey = consumedPreKey,
             ),
+
             "protocolVersion" to SESSION_PROTOCOL_VERSION,
             "requiresReauth" to requiresReauth,
             "handshakeEpochMs" to handshakeEpochMs,
@@ -430,23 +445,39 @@ class FriendRequestRepository(
         }
     }
 
+    /** Deriva una raíz *estable* para el room (no depende de prekeys consumidos ni otros volátiles). */
     private fun deriveRootKeyMaterial(
         ownerUid: String,
         ownerBundle: KeyBundle,
         peerUid: String,
         peerBundle: KeyBundle,
-        consumedPreKey: OneTimePreKeyInfo?,
     ): String {
         return try {
+            // Orden canónico por uid para que ambos lados deriven la misma clave
+            val (aUid, aBundle, bUid, bBundle) =
+                if (ownerUid <= peerUid) {
+                    arrayOf(ownerUid, ownerBundle, peerUid, peerBundle)
+                } else {
+                    arrayOf(peerUid, peerBundle, ownerUid, ownerBundle)
+                }
+
             val digest = MessageDigest.getInstance("SHA-256")
-            digest.update(ownerUid.toByteArray(StandardCharsets.UTF_8))
-            digest.update(peerUid.toByteArray(StandardCharsets.UTF_8))
-            digest.update(decodeBase64(ownerBundle.identityPublicKey))
-            digest.update(decodeBase64(ownerBundle.identitySignaturePublicKey))
-            digest.update(decodeBase64(peerBundle.identityPublicKey))
-            digest.update(decodeBase64(peerBundle.identitySignaturePublicKey))
-            digest.update(decodeBase64(peerBundle.signedPreKey))
-            consumedPreKey?.publicKey?.let { digest.update(decodeBase64(it)) }
+
+            // UIDs en orden estable
+            digest.update((aUid as String).toByteArray(StandardCharsets.UTF_8))
+            digest.update((bUid as String).toByteArray(StandardCharsets.UTF_8))
+
+            // Claves públicas de identidad y firmada (datos "persistentes")
+            fun upsertBundle(bundle: KeyBundle) {
+                digest.update(decodeBase64(bundle.identityPublicKey))
+                digest.update(decodeBase64(bundle.identitySignaturePublicKey))
+                digest.update(decodeBase64(bundle.signedPreKey))
+                digest.update(bundle.signedPreKeyId.toString().toByteArray(StandardCharsets.UTF_8))
+            }
+            upsertBundle(aBundle as KeyBundle)
+            upsertBundle(bBundle as KeyBundle)
+
+            // ❌ NO incluir one-time prekeys ni nada que rote por refresh
             Base64.encodeToString(digest.digest(), Base64.NO_WRAP)
         } catch (error: Exception) {
             Base64.encodeToString(
@@ -464,7 +495,7 @@ class FriendRequestRepository(
 
     private data class SessionWriteSet(
         val roomId: String,
-        val documents: Map<String, MutableMap<String, Any?>>, // ownerUid -> session payload
+        val documents: Map<String, MutableMap<String, Any?>>,
         val preKeyUpdate: PreKeyUpdate?,
         val handshakeEpochMs: Long,
         val requiresReauth: Boolean,

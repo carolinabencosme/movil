@@ -17,6 +17,7 @@ import java.util.Locale
 
 class ChatAdapter(
     private val myUid: String,
+    private val onBindAttachment: (Message, ImageView, TextView) -> Unit
 ) : ListAdapter<Message, ChatAdapter.MessageViewHolder>(DIFF_CALLBACK) {
 
     class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -60,6 +61,7 @@ class ChatAdapter(
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
 
+        holder.imageView.setImageDrawable(null);
         holder.imageView.visibility = View.GONE
         val context = holder.itemView.context
         val decrypted = message.decrypted
@@ -103,6 +105,7 @@ class ChatAdapter(
             holder.timeText.text = ""
             holder.timeText.visibility = View.INVISIBLE
         }
+        onBindAttachment(message, holder.imageView, holder.messageText)
     }
 
 

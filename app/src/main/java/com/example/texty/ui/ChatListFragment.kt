@@ -2,15 +2,12 @@ package com.example.texty.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.Menu
-import android.view.MenuInflater
-import android.view.MenuItem
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.widget.CheckBox
 import android.widget.ProgressBar
+import com.google.firebase.auth.ktx.auth
 import android.widget.TextView
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -19,17 +16,18 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
 import com.example.texty.model.ChatRoom
 import com.example.texty.model.User
-import com.example.texty.util.AppLogger
-import com.example.texty.util.ErrorLogger
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.ktx.Firebase
 import androidx.core.widget.addTextChangedListener
-import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.textfield.TextInputEditText
 import java.util.Locale
 import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.UserRepository
+import com.example.texty.util.AppLogger
+import com.example.texty.util.ErrorLogger
+import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.textfield.TextInputEditText
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.ktx.Firebase
+import java.util.*
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
@@ -53,105 +51,15 @@ class ChatListFragment : Fragment() {
         return inflater.inflate(R.layout.fragment_chat_list, container, false)
     }
 
-   /* override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val currentUser = Firebase.auth.currentUser!!
-        val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
-
-        adapter = ChatListAdapter { room ->
-            val uid = room.contactUid.takeUnless { it.isBlank() }
-            val name = room.contactName.takeUnless { it.isBlank() }
-            if (uid == null || name == null) {
-                val error = IllegalArgumentException("ChatRoom missing contactUid or contactName")
-                ErrorLogger.log(requireContext(), error)
-                return@ChatListAdapter
-            }
-            val intent = Intent(requireContext(), ChatActivity::class.java).apply {
-                putExtra("recipientUid", uid)
-                putExtra("recipientName", name)
-            }
-            startActivity(intent)
-        }
-
-        recycler = view.findViewById(R.id.recyclerChats)
-        progressBar = view.findViewById(R.id.progressBar)
-        placeholder = view.findViewById(R.id.textPlaceholder)
-
-        recycler.layoutManager = LinearLayoutManager(requireContext())
-        recycler.adapter = adapter
-        recycler.addItemDecoration(DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL))
-
-        searchInput = view.findViewById<TextInputEditText>(R.id.editSearch)
-        searchInput.addTextChangedListener { text ->
-            filterRooms(text?.toString() ?: "")
-        }
-
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-        }
-        viewModel.rooms.observe(viewLifecycleOwner) { list ->
-            val uid = Firebase.auth.currentUser!!.uid
-
-            // Traer también la lista de amigos
-            UserRepository().getFriends(uid, onSuccess = { friends ->
-                // Crear ChatRoom "vacío" si no existe conversación aún
-                val friendRooms = friends.map { user ->
-                    ChatRoom(
-                        id = user.uid, // puedes usar algo como "${uid}_${user.uid}" si prefieres
-                        contactUid = user.uid,
-                        contactName = user.displayName,
-                        lastMessagePreview = null // vacío porque aún no hay chat
-                    )
-                }
-
-                // Combinar rooms existentes con los amigos
-                val combined = (list + friendRooms).distinctBy { it.contactUid }
-                allRooms = combined
-
-                if (allRooms.isEmpty()) {
-                    view?.findViewById<TextView>(R.id.textPlaceholder)?.visibility = View.VISIBLE
-                    view?.findViewById<RecyclerView>(R.id.recyclerChats)?.visibility = View.GONE
-                } else {
-                    view?.findViewById<TextView>(R.id.textPlaceholder)?.visibility = View.GONE
-                    view?.findViewById<RecyclerView>(R.id.recyclerChats)?.visibility = View.VISIBLE
-                    filterRooms(searchInput.text?.toString() ?: "")
-                }
-            }, onFailure = { e ->
-                AppLogger.logError(requireContext(), e)
-            })
-        }
-
-        /*viewModel.rooms.observe(viewLifecycleOwner) { list ->
-            allRooms = list
-            if (list.isEmpty()) {
-                placeholder.visibility = View.VISIBLE
-                recycler.visibility = View.GONE
-            } else {
-                placeholder.visibility = View.GONE
-                recycler.visibility = View.VISIBLE
-                filterRooms(searchInput.text?.toString() ?: "")
-            }
-        }*/
-
-        viewModel.error.observe(viewLifecycleOwner) { e ->
-            e?.let { AppLogger.logError(requireContext(), it) }
-        }
-        viewModel.startListening(currentUser.uid)
-    }
-*/
-
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val currentUser = Firebase.auth.currentUser!!
+        val currentUser = Firebase.auth.currentUser ?: return // 👈 evita crash si ya está null
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
         (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
             if (room.isGroup) {
-                // 🔹 Abrir chat grupal
                 val intent = Intent(requireContext(), ChatActivity::class.java).apply {
                     putExtra("roomId", room.id)
                     putExtra("isGroup", true)
@@ -159,7 +67,6 @@ class ChatListFragment : Fragment() {
                 }
                 startActivity(intent)
             } else {
-                // 🔹 Abrir chat privado
                 val otherUid = room.participantIds.firstOrNull { it != currentUser.uid }
                 val otherName = otherUid?.let { room.userNames[it] } ?: "Desconocido"
 
@@ -183,9 +90,11 @@ class ChatListFragment : Fragment() {
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
-        recycler.addItemDecoration(DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL))
+        recycler.addItemDecoration(
+            DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
+        )
 
-        searchInput = view.findViewById<TextInputEditText>(R.id.editSearch)
+        searchInput = view.findViewById(R.id.editSearch)
         searchInput.addTextChangedListener { text ->
             filterRooms(text?.toString() ?: "")
         }
@@ -202,6 +111,40 @@ class ChatListFragment : Fragment() {
             } else {
                 pendingRooms = list
             }
+            val uid = Firebase.auth.currentUser?.uid ?: return@observe // 👈 evita crash tras logout
+
+            UserRepository().getFriends(uid, onSuccess = { friends ->
+                val friendRooms = friends.map { user ->
+                    ChatRoom(
+                        id = user.uid,
+                        participantIds = listOf(uid, user.uid),
+                        userNames = mapOf(
+                            uid to (Firebase.auth.currentUser?.displayName ?: "Yo"),
+                            user.uid to user.displayName
+                        ),
+                        isGroup = false,
+                        lastMessagePreview = null
+                    )
+                }
+
+                val combined = (list + friendRooms).distinctBy { room ->
+                    if (room.isGroup) room.id
+                    else room.participantIds.sorted().joinToString("_")
+                }
+
+                allRooms = combined
+
+                if (allRooms.isEmpty()) {
+                    placeholder.visibility = View.VISIBLE
+                    recycler.visibility = View.GONE
+                } else {
+                    placeholder.visibility = View.GONE
+                    recycler.visibility = View.VISIBLE
+                    filterRooms(searchInput.text?.toString() ?: "")
+                }
+            }, onFailure = { e ->
+                AppLogger.logError(requireContext(), e)
+            })
         }
 
         loadFriends(currentUser.uid)
@@ -264,6 +207,7 @@ class ChatListFragment : Fragment() {
             }
             R.id.action_logout -> {
                 FirebaseAuth.getInstance().signOut()
+                // 👇 redirigir inmediatamente para que el fragmento no intente acceder al usuario null
                 val intent = Intent(requireContext(), LoginActivity::class.java)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 startActivity(intent)
@@ -278,21 +222,11 @@ class ChatListFragment : Fragment() {
         }
     }
 
-   /* private fun filterRooms(query: String) {
-        if (query.isBlank()) {
-            adapter.submitList(allRooms)
-        } else {
-            val lower = query.lowercase(Locale.getDefault())
-            adapter.submitList(allRooms.filter { it.contactName.lowercase(Locale.getDefault()).contains(lower) })
-        }
-    }*/
-
     private fun filterRooms(query: String) {
         if (query.isBlank()) {
             adapter.submitList(allRooms)
         } else {
             val lower = query.lowercase(Locale.getDefault())
-
             val filtered = allRooms.filter { room ->
                 if (room.isGroup) {
                     room.groupName?.lowercase(Locale.getDefault())?.contains(lower) == true
@@ -303,7 +237,6 @@ class ChatListFragment : Fragment() {
                     otherName?.lowercase(Locale.getDefault())?.contains(lower) == true
                 }
             }
-
             adapter.submitList(filtered)
         }
     }
@@ -407,9 +340,9 @@ class ChatListFragment : Fragment() {
         })
     }
 
-    // ViewHolder para amigos
     private class FriendVH(view: View) : RecyclerView.ViewHolder(view) {
         val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
     }
-
 }
+
+

@@ -4,6 +4,7 @@ import android.util.Base64
 import com.example.texty.model.SessionKeyInfo
 import com.example.texty.util.MessageCrypto
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.tasks.await
@@ -44,7 +45,7 @@ class SessionKeyRepository(
                 ownerUid = ownerUid,
                 rootKey = null,
                 schemeVersion = MessageCrypto.CURRENT_SCHEME_VERSION,
-                encryptionTarget = "direct:${peerUid ?: "unknown"}",
+                encryptionTarget = "direct:$roomId",
                 requiresReauth = true,
             )
         }
@@ -53,19 +54,31 @@ class SessionKeyRepository(
         val protocolVersion = participantDoc.getLong("protocolVersion")?.toInt()
             ?: MessageCrypto.CURRENT_SCHEME_VERSION
         val targetPeer = participantDoc.getString("peerUid") ?: peerUid ?: "unknown"
-        val requiresReauth = participantDoc.getBoolean("requiresReauth") ?: false
 
-        val rootKey = rootKeyMaterial?.let { decodeBase64(it) }
+        val rootKey = rootKeyMaterial?.let { Base64.decode(it, Base64.NO_WRAP) }
+        val effectiveRequiresReauth = (rootKey == null) // 👈 ÚNICA fuente de verdad
+
+        // (Opcional) auto-sanear el flag persistido si está desfasado
+        if (!effectiveRequiresReauth && participantDoc.getBoolean("requiresReauth") == true) {
+            try {
+                firestore.collection("sessions").document(roomId)
+                    .collection("participants").document(ownerUid)
+                    .set(mapOf("requiresReauth" to false), com.google.firebase.firestore.SetOptions.merge())
+                    .await()
+            } catch (_: Exception) { /* no bloquear si falla */ }
+        }
 
         return SessionKeyInfo(
             roomId = roomId,
             ownerUid = ownerUid,
             rootKey = rootKey,
             schemeVersion = protocolVersion,
-            encryptionTarget = "direct:$targetPeer",
-            requiresReauth = requiresReauth || rootKey == null,
+            encryptionTarget = "direct:$roomId",
+            requiresReauth = effectiveRequiresReauth,
         )
+
     }
+
 
     private fun decodeBase64(value: String): ByteArray =
         Base64.decode(value, Base64.NO_WRAP)
@@ -76,4 +89,27 @@ class SessionKeyRepository(
         digest.update(roomId.toByteArray(StandardCharsets.UTF_8))
         return digest.digest()
     }
+
+    suspend fun saveSessionKey(
+        roomId: String,
+        ownerUid: String,
+        peerUid: String,
+        rootKey: ByteArray,
+        schemeVersion: Int = MessageCrypto.CURRENT_SCHEME_VERSION,
+    ) {
+        val docRef = firestore.collection("sessions")
+            .document(roomId)
+            .collection("participants")
+            .document(ownerUid)
+
+        val data = mapOf(
+            "rootKeyMaterial" to Base64.encodeToString(rootKey, Base64.NO_WRAP),
+            "protocolVersion" to schemeVersion,
+            "peerUid" to peerUid,
+            "requiresReauth" to false
+        )
+
+        docRef.set(data, SetOptions.merge()).await()
+    }
+
 }

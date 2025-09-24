@@ -6,6 +6,13 @@
     <string name="required_field">Campo requerido</string>
     <string name="logout">Cerrar sesión</string>
     <string name="save">Guardar</string>
+    <string name="action_login">Iniciar sesión</string>
+    <string name="action_register">Crear cuenta</string>
+    <string name="login_subtitle">Gestiona tus conversaciones seguras</string>
+    <string name="register_subtitle">Crea tu cuenta para comenzar a chatear</string>
+    <string name="hint_email">Correo electrónico</string>
+    <string name="hint_password">Contraseña</string>
+    <string name="hint_name">Nombre completo</string>
     <string name="display_name">Nombre</string>
     <string name="profile_photo">Foto de perfil</string>
     <string name="chats_title">Chats</string>
@@ -42,6 +49,9 @@
     <string name="chat_banner_icon_content_description">Mensaje enviado</string>
     <string name="chat_banner_message_sent">Mensaje enviado</string>
     <string name="chat_banner_preview_with_time">%1$s · %2$s</string>
+    <string name="chat_add_image">Adjuntar imagen</string>
+    <string name="chat_message_hint">Escribe un mensaje</string>
+    <string name="chat_action_send">Enviar</string>
     <string name="notification_generic_title">Nuevo mensaje</string>
     <string name="notification_generic_body">Tienes un mensaje nuevo</string>
     <plurals name="notification_new_messages">

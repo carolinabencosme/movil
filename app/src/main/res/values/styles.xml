@@ -1,24 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Text field base style -->
-    <style name="AppEditText" parent="Widget.AppCompat.EditText">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <item name="android:backgroundTint">?attr/colorSurfaceVariant</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-        <item name="android:textColorHint">?attr/colorTertiary</item>
+    <style name="AppToolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@drawable/bg_gradient_primary</item>
+        <item name="titleTextColor">@color/md_theme_light_onPrimary</item>
+        <item name="subtitleTextColor">@color/md_theme_light_onPrimary</item>
+        <item name="android:popupTheme">@style/ThemeOverlay.Material3.Light</item>
+        <item name="android:elevation">0dp</item>
+        <item name="navigationIconTint">@color/md_theme_light_onPrimary</item>
     </style>
 
-    <!-- Material 3 Buttons -->
+    <style name="AppToolbar.Surface" parent="AppToolbar">
+        <item name="android:background">@color/md_theme_light_surface</item>
+        <item name="titleTextColor">@color/md_theme_light_onSurface</item>
+        <item name="subtitleTextColor">@color/md_theme_light_onSurfaceVariant</item>
+        <item name="navigationIconTint">@color/md_theme_light_onSurface</item>
+    </style>
+
     <style name="AppButton" parent="Widget.Material3.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <!-- Use the theme token for M3 shape -->
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
         <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
@@ -26,7 +33,11 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
         <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
@@ -34,14 +45,57 @@
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:letterSpacing">0.02</item>
         <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
     </style>
 
-    <!-- Toolbar -->
-    <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
+    <style name="AppButton.Icon" parent="Widget.Material3.Button.Icon">
+        <item name="android:padding">10dp</item>
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="backgroundTint">@color/md_theme_light_surfaceVariant</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceLargeComponent</item>
+    </style>
 
-    <!-- Punto base -->
+    <style name="Widget.Texty.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="boxBackgroundColor">@color/md_theme_light_surfaceVariant</item>
+        <item name="hintTextColor">@color/text_input_hint</item>
+        <item name="android:hintTextColor">@color/text_input_hint</item>
+        <item name="startIconTint">@color/text_input_icon</item>
+        <item name="endIconTint">@color/text_input_icon</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+    </style>
+
+    <style name="Widget.Texty.TextInputEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:textColorHint">@color/text_input_hint</item>
+        <item name="android:fontFamily">sans-serif</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="TextAppearance.Texty.Headline" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <style name="TextAppearance.Texty.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">?attr/colorOnSurfaceVariant</item>
+        <item name="android:fontFamily">sans-serif</item>
+    </style>
+
     <style name="StateDot">
         <item name="android:layout_width">8dp</item>
         <item name="android:layout_height">8dp</item>
@@ -49,15 +103,14 @@
         <item name="android:layout_marginEnd">6dp</item>
     </style>
 
-    <!-- Variante de error (la que te falta) -->
     <style name="StateDot.Error" parent="StateDot">
         <item name="android:background">@drawable/state_dot_error</item>
     </style>
 
-    <!-- (Opcional, por si el layout usa otras variantes) -->
     <style name="StateDot.Online" parent="StateDot">
         <item name="android:background">@drawable/state_dot_online</item>
     </style>
+
     <style name="StateDot.Offline" parent="StateDot">
         <item name="android:background">@drawable/state_dot_offline</item>
     </style>

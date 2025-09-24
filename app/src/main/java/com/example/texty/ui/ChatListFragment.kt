@@ -4,30 +4,26 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.*
 import android.widget.CheckBox
-import android.widget.ProgressBar
-import com.google.firebase.auth.ktx.auth
 import android.widget.TextView
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
 import com.example.texty.model.ChatRoom
 import com.example.texty.model.User
 import com.google.firebase.auth.ktx.auth
-import androidx.core.widget.addTextChangedListener
 import java.util.Locale
 import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.UserRepository
 import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
 import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.ktx.Firebase
-import java.util.*
 
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
@@ -36,7 +32,7 @@ class ChatListFragment : Fragment() {
     private var allRooms: List<ChatRoom> = emptyList()
     private lateinit var recycler: RecyclerView
     private lateinit var placeholder: TextView
-    private lateinit var progressBar: ProgressBar
+    private lateinit var progressBar: CircularProgressIndicator
     private var cachedFriends: List<User>? = null
     private var pendingRooms: List<ChatRoom>? = null
     private val userRepository = UserRepository()
@@ -90,10 +86,6 @@ class ChatListFragment : Fragment() {
 
         recycler.layoutManager = LinearLayoutManager(requireContext())
         recycler.adapter = adapter
-        recycler.addItemDecoration(
-            DividerItemDecoration(requireContext(), DividerItemDecoration.VERTICAL)
-        )
-
         searchInput = view.findViewById(R.id.editSearch)
         searchInput.addTextChangedListener { text ->
             filterRooms(text?.toString() ?: "")
@@ -239,6 +231,7 @@ class ChatListFragment : Fragment() {
             }
             adapter.submitList(filtered)
         }
+        recycler.scheduleLayoutAnimation()
     }
 
     private fun openCreateGroupDialog() {

@@ -12,6 +12,7 @@ import com.example.texty.model.ChatRoom
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import java.text.DateFormat
 
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
@@ -22,6 +23,7 @@ class ChatListAdapter(
         val lastMessageText: TextView = view.findViewById(R.id.textLastMessage)
         val statusView: View = view.findViewById(R.id.viewStatus)
         val unreadCountText: TextView = view.findViewById(R.id.textUnreadCount)
+        val lastUpdatedText: TextView = view.findViewById(R.id.textLastUpdated)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
@@ -61,8 +63,14 @@ class ChatListAdapter(
         val currentUid = Firebase.auth.currentUser?.uid
         val count = currentUid?.let { room.unreadCounts[it] } ?: 0
         holder.unreadCountText.apply {
-            text = if (count > 6) "6+" else count.toString()
+            text = count.toString()
             visibility = if (count > 0) View.VISIBLE else View.GONE
+        }
+
+        val formattedTime = room.updatedAt?.toDate()?.let { timeFormatter.format(it) }
+        holder.lastUpdatedText.apply {
+            text = formattedTime ?: ""
+            visibility = if (formattedTime != null) View.VISIBLE else View.GONE
         }
 
         // Estado online SOLO en chats individuales
@@ -89,6 +97,7 @@ class ChatListAdapter(
         holder.itemView.setOnClickListener { onClick(room) }
     }
     companion object {
+        private val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
         private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<ChatRoom>() {
             override fun areItemsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
                 return oldItem.id == newItem.id

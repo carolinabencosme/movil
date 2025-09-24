@@ -134,6 +134,7 @@ class ChatActivity : AppCompatActivity() {
     setContentView(R.layout.activity_chat)
 
     val sendImageButton = findViewById<MaterialButton>(R.id.buttonSendImage)
+    sendImageButton.contentDescription = getString(R.string.chat_add_image)
     val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
@@ -147,6 +148,7 @@ class ChatActivity : AppCompatActivity() {
     recyclerView = findViewById(R.id.recyclerView)
     messageInput = findViewById(R.id.editMessage)
     sendButton = findViewById(R.id.buttonSend)
+    sendButton.setText(R.string.chat_action_send)
 
     //adapter = ChatAdapter(currentUid)
     adapter = ChatAdapter(currentUid) { msg, iv, tv ->

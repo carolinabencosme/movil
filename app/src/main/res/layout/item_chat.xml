@@ -46,6 +46,8 @@
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
                 style="@style/TextAppearance.Material3.TitleMedium"
                 android:textColor="?attr/colorOnSurface" />
 

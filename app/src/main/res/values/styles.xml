@@ -71,7 +71,6 @@
         <item name="boxStrokeColor">@color/text_input_stroke</item>
         <item name="boxBackgroundColor">@color/md_theme_light_surfaceVariant</item>
         <item name="hintTextColor">@color/text_input_hint</item>
-        <item name="android:hintTextColor">@color/text_input_hint</item>
         <item name="startIconTint">@color/text_input_icon</item>
         <item name="endIconTint">@color/text_input_icon</item>
         <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>

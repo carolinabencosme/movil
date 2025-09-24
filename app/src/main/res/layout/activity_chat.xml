@@ -120,7 +120,6 @@
                 style="@style/AppButton.Icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:contentDescription="@string/chat_add_image"
                 app:icon="@drawable/baseline_add_photo_alternate_24"
                 app:iconTint="?attr/colorOnSurfaceVariant" />
 
@@ -155,7 +154,6 @@
                 android:minWidth="0dp"
                 android:paddingHorizontal="18dp"
                 android:paddingVertical="10dp"
-                android:text="@string/chat_action_send"
                 android:textAllCaps="false"
                 android:textColor="?attr/colorOnPrimary"
                 app:backgroundTint="@color/md_theme_light_primary"

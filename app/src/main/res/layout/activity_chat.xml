@@ -138,6 +138,8 @@
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     style="@style/Widget.Texty.TextInputEditText"
                     android:hint="@string/chat_message_hint"
                     android:inputType="textCapSentences|textMultiLine"

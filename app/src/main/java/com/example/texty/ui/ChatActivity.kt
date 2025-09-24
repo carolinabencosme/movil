@@ -5,6 +5,8 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +38,8 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+import java.text.DateFormat
+import java.util.Date
 import java.util.UUID
 
 class ChatActivity : AppCompatActivity() {
@@ -44,6 +48,10 @@ class ChatActivity : AppCompatActivity() {
   private lateinit var adapter: ChatAdapter
   private lateinit var messageInput: EditText
   private lateinit var sendButton: Button
+  private lateinit var messageBanner: View
+  private lateinit var messageBannerTitle: TextView
+  private lateinit var messageBannerSubtitle: TextView
+  private lateinit var messageBannerIcon: ImageView
   private lateinit var listenerRegistration: ListenerRegistration
   private lateinit var roomRef: DocumentReference
   private lateinit var messagesRef: CollectionReference
@@ -62,6 +70,8 @@ class ChatActivity : AppCompatActivity() {
   private val sessionKeyRepository = SessionKeyRepository()
   private var sessionKeyInfo: SessionKeyInfo? = null
   private var messageMapper: MessageMapper? = null
+  private val bannerHandler = Handler(Looper.getMainLooper())
+  private var bannerHideRunnable: Runnable? = null
 
   private val pickImageLauncher = registerForActivityResult(
     ActivityResultContracts.GetContent()
@@ -128,6 +138,11 @@ class ChatActivity : AppCompatActivity() {
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = title
+
+    messageBanner = findViewById(R.id.messageBanner)
+    messageBannerTitle = messageBanner.findViewById(R.id.messageBannerTitle)
+    messageBannerSubtitle = messageBanner.findViewById(R.id.messageBannerSubtitle)
+    messageBannerIcon = messageBanner.findViewById(R.id.messageBannerIcon)
 
     recyclerView = findViewById(R.id.recyclerView)
     messageInput = findViewById(R.id.editMessage)
@@ -415,11 +430,15 @@ class ChatActivity : AppCompatActivity() {
       }
     }
 
+    showMessageBanner(title, sanitizedPreview, messageType)
+
     if (messageType == MESSAGE_TYPE_TEXT) messageInput.text?.clear()
   }
 
   override fun onDestroy() {
     if (::listenerRegistration.isInitialized) listenerRegistration.remove()
+    bannerHideRunnable?.let { bannerHandler.removeCallbacks(it) }
+    bannerHideRunnable = null
     super.onDestroy()
   }
 
@@ -491,6 +510,46 @@ class ChatActivity : AppCompatActivity() {
         title = recipientName ?: (groupName ?: placeholder),
       )
     }
+  }
+
+  private fun showMessageBanner(title: String, preview: String, messageType: String) {
+    if (!::messageBanner.isInitialized) return
+
+    val displayPreview = if (preview.isNotBlank()) preview else getString(R.string.chat_banner_message_sent)
+    val timeText = DateFormat.getTimeInstance(DateFormat.SHORT).format(Date())
+    messageBannerTitle.text = title
+    messageBannerSubtitle.text = getString(R.string.chat_banner_preview_with_time, displayPreview, timeText)
+
+    val iconRes = when (messageType) {
+      MESSAGE_TYPE_IMAGE -> R.drawable.baseline_add_photo_alternate_24
+      else -> R.drawable.ic_send
+    }
+    messageBannerIcon.setImageResource(iconRes)
+
+    bannerHideRunnable?.let { bannerHandler.removeCallbacks(it) }
+    messageBanner.animate().cancel()
+
+    if (messageBanner.visibility != View.VISIBLE) {
+      messageBanner.alpha = 0f
+      messageBanner.visibility = View.VISIBLE
+    }
+
+    messageBanner.animate().alpha(1f).setDuration(200).start()
+
+    val hideRunnable = Runnable {
+      messageBanner.animate()
+        .alpha(0f)
+        .setDuration(200)
+        .withEndAction {
+          messageBanner.visibility = View.GONE
+          messageBanner.alpha = 1f
+        }
+        .start()
+      bannerHideRunnable = null
+    }
+
+    bannerHideRunnable = hideRunnable
+    bannerHandler.postDelayed(hideRunnable, 3000)
   }
 
   private fun bindAttachment(

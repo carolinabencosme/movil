@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">projectAndroid</string>
+    <string name="chat_list_search_hint">Search conversations</string>
+    <string name="chat_list_new_chat_content_description">Start a new chat</string>
 </resources>

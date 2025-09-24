@@ -31,7 +31,6 @@
 
         <item name="toolbarStyle">@style/AppToolbar</item>
         <item name="textInputStyle">@style/Widget.Texty.TextInputLayout</item>
-        <item name="textInputEditTextStyle">@style/Widget.Texty.TextInputEditText</item>
     </style>
 
     <!-- Tema de la app -->

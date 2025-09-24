@@ -52,9 +52,11 @@ class ChatAdapter(
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END
             holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
+            holder.imageView.setBackgroundResource(R.drawable.bubble_outgoing)
         } else {
             holder.root.gravity = Gravity.START
             holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
+            holder.imageView.setBackgroundResource(R.drawable.bubble_incoming)
         }
     }*/
 
@@ -92,9 +94,11 @@ class ChatAdapter(
         if (message.senderId == myUid) {
             holder.root.gravity = Gravity.END
             holder.messageText.setBackgroundResource(R.drawable.bubble_outgoing)
+            holder.imageView.setBackgroundResource(R.drawable.bubble_outgoing)
         } else {
             holder.root.gravity = Gravity.START
             holder.messageText.setBackgroundResource(R.drawable.bubble_incoming)
+            holder.imageView.setBackgroundResource(R.drawable.bubble_incoming)
         }
 
         val ts = message.createdAt

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.texty.R
@@ -18,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import com.google.android.material.progressindicator.CircularProgressIndicator
 
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,7 +41,7 @@ class LoginActivity : AppCompatActivity() {
     val passwordInput = findViewById<TextInputEditText>(R.id.editPassword)
     val loginButton = findViewById<Button>(R.id.buttonLogin)
     val registerButton = findViewById<Button>(R.id.buttonRegister)
-    val progressBar = findViewById<ProgressBar>(R.id.progressBar)
+    val progressBar = findViewById<CircularProgressIndicator>(R.id.progressBar)
 
     loginButton.setOnClickListener {
       val email = emailInput.text.toString().trim()

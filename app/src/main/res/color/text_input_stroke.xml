@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_error="true" android:color="@color/colorError" />
+    <item android:state_focused="true" android:color="@color/md_theme_light_primary" />
+    <item android:color="@color/md_theme_light_outline" />
+</selector>

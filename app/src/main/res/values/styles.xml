@@ -69,6 +69,7 @@
         <item name="boxStrokeWidth">1dp</item>
         <item name="boxStrokeWidthFocused">2dp</item>
         <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="boxStrokeErrorColor">@color/colorError</item>
         <item name="boxBackgroundColor">@color/md_theme_light_surfaceVariant</item>
         <item name="hintTextColor">@color/text_input_hint</item>
         <item name="startIconTint">@color/text_input_icon</item>

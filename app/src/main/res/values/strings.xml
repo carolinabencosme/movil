@@ -44,6 +44,10 @@
     <string name="chat_banner_preview_with_time">%1$s · %2$s</string>
     <string name="notification_generic_title">Nuevo mensaje</string>
     <string name="notification_generic_body">Tienes un mensaje nuevo</string>
+    <string name="permissions_title">Permisos necesarios</string>
+    <string name="permissions_message">Para enviarte notificaciones y permitir fotos/adjuntos, necesitamos permisos de Notificaciones, Cámara y Acceso a Imágenes.</string>
+    <string name="permissions_allow">Conceder</string>
+    <string name="permissions_not_now">Ahora no</string>
     <plurals name="notification_new_messages">
         <item quantity="one">Tienes %d mensaje nuevo</item>
         <item quantity="other">Tienes %d mensajes nuevos</item>

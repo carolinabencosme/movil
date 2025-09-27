@@ -148,19 +148,10 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonSend"
-                style="@style/Widget.Material3.Button"
+                style="@style/Widget.Texty.SendButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:minWidth="0dp"
-                android:paddingHorizontal="18dp"
-                android:paddingVertical="10dp"
-                android:textAllCaps="false"
-                android:textColor="?attr/colorOnPrimary"
-                app:backgroundTint="@color/md_theme_light_primary"
-                app:icon="@drawable/ic_send"
-                app:iconGravity="textStart"
-                app:iconPadding="8dp"
-                app:iconTint="?attr/colorOnPrimary" />
+                app:icon="@drawable/ic_send" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

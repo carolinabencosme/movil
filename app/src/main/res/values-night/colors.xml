@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="md_theme_light_primary">#6366F1</color>
+    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+    <color name="md_theme_light_primaryContainer">#312E81</color>
+    <color name="md_theme_light_onPrimaryContainer">#E0E7FF</color>
+
     <color name="md_theme_light_secondary">#22D3EE</color>
+    <color name="md_theme_light_onSecondary">#042F2E</color>
+    <color name="md_theme_light_secondaryContainer">#164E63</color>
+    <color name="md_theme_light_onSecondaryContainer">#ECFEFF</color>
+
     <color name="md_theme_light_tertiary">#FF6B6B</color>
     <color name="md_theme_light_surface">#111827</color>
     <color name="md_theme_light_surfaceVariant">#1E293B</color>
+    <color name="md_theme_light_surfaceContainer">#0B1120</color>
     <color name="md_theme_light_onSurface">#F1F5F9</color>
     <color name="md_theme_light_onSurfaceVariant">#9CA3AF</color>
+    <color name="md_theme_light_outline">#334155</color>
+    <color name="md_theme_light_outlineVariant">#1F2937</color>
     <color name="md_theme_light_error">#EF4444</color>
     <color name="md_theme_light_warning">#F59E0B</color>
     <color name="md_theme_light_success">#22C55E</color>
-    <color name="md_theme_light_onPrimary">#FFFFFF</color>
+
     <color name="colorSuccess">#22C55E</color>
     <color name="colorWarning">#F59E0B</color>
     <color name="colorError">#EF4444</color>
     <color name="colorInfo">#60A5FA</color>
+
+    <color name="colorCardStroke">#1F2937</color>
 </resources>

@@ -4,6 +4,8 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:animateLayoutChanges="true"
+    android:background="@color/md_theme_light_surfaceContainer"
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -14,28 +16,31 @@
             android:id="@+id/topAppBar"
             style="@style/AppToolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_gradient_primary"
-            android:theme="@style/ThemeOverlay.Material3.Dark.ActionBar" />
+            android:layout_height="wrap_content" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/messageBanner"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginTop="8dp"
+        android:layout_marginHorizontal="20dp"
+        android:layout_marginTop="12dp"
+        android:layout_marginBottom="4dp"
+        android:animateLayoutChanges="true"
         android:visibility="gone"
         app:cardBackgroundColor="?attr/colorSurface"
-        app:cardElevation="4dp"
-        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium">
+        app:cardCornerRadius="20dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/colorCardStroke"
+        app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
+            android:minHeight="56dp"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp"
+            android:paddingHorizontal="20dp"
             android:paddingVertical="12dp">
 
             <ImageView
@@ -45,7 +50,7 @@
                 android:contentDescription="@string/chat_banner_icon_content_description"
                 android:padding="4dp"
                 android:src="@drawable/ic_send"
-                android:tint="?attr/colorPrimary" />
+                android:tint="@color/md_theme_light_primary" />
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -54,7 +59,7 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/messageBannerTitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -63,7 +68,7 @@
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                     android:textColor="?attr/colorOnSurface" />
 
-                <TextView
+                <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/messageBannerSubtitle"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -79,58 +84,75 @@
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_weight="1"
+        android:layoutAnimation="@anim/layout_fade_through"
+        android:clipToPadding="false"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp" />
 
-    <LinearLayout
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/composerCard"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginBottom="16dp"
+        android:animateLayoutChanges="true"
+        app:cardBackgroundColor="?attr/colorSurface"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="4dp"
+        app:strokeColor="@color/colorCardStroke"
+        app:strokeWidth="1dp">
 
-        <!-- Botón para seleccionar imagen -->
-        <!-- <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonSendImage"
-            android:layout_width="wrap_content"
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="📷" /> -->
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp">
 
-        <com.google.android.material.button.MaterialButton
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonSendImage"
+                style="@style/AppButton.Icon"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 app:icon="@drawable/baseline_add_photo_alternate_24"
-                app:iconGravity="textStart"
-                android:text="" />
+                app:iconTint="?attr/colorOnSurfaceVariant" />
 
-
-        <!-- Campo de texto con TextInputLayout -->
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="8dp"
-            android:hint="Escribe un mensaje">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/editMessage"
-                android:layout_width="match_parent"
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:maxLines="4"
-                android:minLines="1"
-                android:inputType="textCapSentences|textMultiLine" />
-        </com.google.android.material.textfield.TextInputLayout>
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="8dp"
+                android:layout_marginTop="0dp"
+                android:layout_weight="1"
+                style="@style/Widget.Texty.TextInputLayout"
+                app:endIconMode="none"
+                app:startIconDrawable="@drawable/baseline_add_reaction_24"
+                app:startIconTint="@color/text_input_icon">
 
-        <!-- Botón enviar -->
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/buttonSend"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="@drawable/bg_gradient_primary"
-            android:text="Enviar"
-            app:icon="@drawable/ic_send"
-            app:iconGravity="textStart"
-            app:iconPadding="0dp"
-            android:layout_marginStart="8dp" />
-    </LinearLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/editMessage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    style="@style/Widget.Texty.TextInputEditText"
+                    android:hint="@string/chat_message_hint"
+                    android:inputType="textCapSentences|textMultiLine"
+                    android:maxLines="4"
+                    android:minLines="1" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/buttonSend"
+                style="@style/Widget.Texty.SendButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:icon="@drawable/ic_send" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
 
 </LinearLayout>

@@ -10,13 +10,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.texty.R
 import com.example.texty.model.ChatRoom
 import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.text.DateFormat
 
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
 ) : ListAdapter<ChatRoom, ChatListAdapter.ChatRoomViewHolder>(DIFF_CALLBACK) {
+
+    private var presenceByUser = emptyMap<String, Boolean>()
 
     class ChatRoomViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val nameText: TextView = view.findViewById(R.id.textName)
@@ -79,22 +80,19 @@ class ChatListAdapter(
         } else {
             holder.statusView.visibility = View.VISIBLE
             val otherUid = room.participantIds.firstOrNull { it != Firebase.auth.currentUser?.uid }
-            if (otherUid != null) {
-                Firebase.firestore.collection("users").document(otherUid).get()
-                    .addOnSuccessListener { snapshot ->
-                        val online = snapshot.getBoolean("isOnline") == true
-                        holder.statusView.setBackgroundResource(
-                            if (online) R.drawable.online_indicator
-                            else R.drawable.offline_indicator
-                        )
-                    }
-            } else {
-                holder.statusView.setBackgroundResource(R.drawable.offline_indicator)
-            }
+            val isOnline = otherUid?.let { presenceByUser[it] == true } ?: false
+            holder.statusView.setBackgroundResource(
+                if (isOnline) R.drawable.online_indicator else R.drawable.offline_indicator
+            )
         }
 
         // Click para abrir el chat
         holder.itemView.setOnClickListener { onClick(room) }
+    }
+
+    fun updatePresence(map: Map<String, Boolean>) {
+        presenceByUser = map
+        notifyDataSetChanged()
     }
     companion object {
         private val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)

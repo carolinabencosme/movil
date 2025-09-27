@@ -106,6 +106,7 @@ class ChatListFragment : Fragment() {
             val uid = Firebase.auth.currentUser?.uid ?: return@observe // 👈 evita crash tras logout
 
             UserRepository().getFriends(uid, onSuccess = { friends ->
+                adapter.updatePresence(friends.associate { it.uid to it.isOnline })
                 val friendRooms = friends.map { user ->
                     ChatRoom(
                         id = user.uid,
@@ -147,6 +148,7 @@ class ChatListFragment : Fragment() {
     private fun loadFriends(uid: String) {
         userRepository.getFriends(uid, onSuccess = { friends ->
             cachedFriends = friends
+            adapter.updatePresence(friends.associate { it.uid to it.isOnline })
             val currentRooms = pendingRooms ?: viewModel.rooms.value ?: emptyList()
             pendingRooms = null
             combineRoomsAndRender(currentRooms, friends)

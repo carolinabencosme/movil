@@ -165,6 +165,8 @@
 
                     <com.google.android.material.textview.MaterialTextView
                         style="@style/TextAppearance.Material3.TitleSmall"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:text="@string/notifications" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
@@ -197,6 +199,8 @@
 
                     <com.google.android.material.textview.MaterialTextView
                         style="@style/TextAppearance.Material3.TitleSmall"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
                         android:text="@string/privacy" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch

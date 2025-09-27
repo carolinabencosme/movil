@@ -27,6 +27,11 @@ class ProfileFragment : Fragment() {
     private var imageUri: Uri? = null
     private var currentProfile: User? = null
 
+    private fun showToast(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+        val appContext = context?.applicationContext ?: return
+        Toast.makeText(appContext, message, duration).show()
+    }
+
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             imageUri = uri
@@ -94,11 +99,7 @@ class ProfileFragment : Fragment() {
                 ?: currentUser.photoUrl
 
             fun showErrorToast(message: String?) {
-                Toast.makeText(
-                    requireContext(),
-                    message ?: getString(R.string.error_generic),
-                    Toast.LENGTH_LONG
-                ).show()
+                showToast(message ?: getString(R.string.error_generic), Toast.LENGTH_LONG)
             }
 
             fun restorePreviousUI() {
@@ -138,11 +139,7 @@ class ProfileFragment : Fragment() {
                             .addOnSuccessListener {
                                 currentProfile = profile
                                 imageUri = null
-                                Toast.makeText(
-                                    requireContext(),
-                                    getString(R.string.profile_saved_success),
-                                    Toast.LENGTH_SHORT
-                                ).show()
+                                showToast(getString(R.string.profile_saved_success))
                             }
                             .addOnFailureListener { e ->
                                 handleFailure(e)
@@ -180,18 +177,10 @@ class ProfileFragment : Fragment() {
             val email = user?.email ?: return@setOnClickListener
             FirebaseAuth.getInstance().sendPasswordResetEmail(email)
                 .addOnSuccessListener {
-                    Toast.makeText(
-                        requireContext(),
-                        getString(R.string.password_reset_email_sent),
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showToast(getString(R.string.password_reset_email_sent), Toast.LENGTH_LONG)
                 }
                 .addOnFailureListener { e ->
-                    Toast.makeText(
-                        requireContext(),
-                        e.localizedMessage ?: getString(R.string.error_generic),
-                        Toast.LENGTH_LONG
-                    ).show()
+                    showToast(e.localizedMessage ?: getString(R.string.error_generic), Toast.LENGTH_LONG)
                 }
         }
 

@@ -73,6 +73,9 @@ class ChatActivity : AppCompatActivity() {
   private val bannerHandler = Handler(Looper.getMainLooper())
   private var bannerHideRunnable: Runnable? = null
 
+  private val userNameCache = mutableMapOf<String, String>()
+
+
   private val pickImageLauncher = registerForActivityResult(
     ActivityResultContracts.GetContent()
   ) { uri: Uri? ->
@@ -151,9 +154,17 @@ class ChatActivity : AppCompatActivity() {
     sendButton.setText(R.string.chat_action_send)
 
     //adapter = ChatAdapter(currentUid)
-    adapter = ChatAdapter(currentUid) { msg, iv, tv ->
+   /* adapter = ChatAdapter(currentUid) { msg, iv, tv ->
       bindAttachment(msg, iv, tv)
-    }
+    }*/
+
+    adapter = ChatAdapter(
+      myUid = currentUid,
+      onBindAttachment = { msg, iv, tv -> bindAttachment(msg, iv, tv) },
+      isGroupChat = isGroupChat,
+      resolveSenderName = { uid -> userNameCache[uid] } // fallback si no trae senderName
+    )
+
     recyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
     recyclerView.adapter = adapter
 
@@ -169,6 +180,16 @@ class ChatActivity : AppCompatActivity() {
     roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
     messagesRef = roomRef.collection("messages")
     // reset del flag de auto-resync aqui
+       roomRef.addSnapshotListener { snap, _ ->
+      val map = snap?.get("userNames") as? Map<*, *>
+      if (map != null) {
+        userNameCache.clear()
+        map.forEach { (k, v) ->
+          if (k is String && v is String) userNameCache[k] = v
+        }
+      }
+    }
+
     triedAutoResync = false
     // --------------------------------
 

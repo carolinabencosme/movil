@@ -170,7 +170,7 @@ class MessageMapper(
         val normalizedType = messageType?.lowercase(Locale.US) ?: ""
         return when {
             normalizedType.startsWith("text") -> body.text.orEmpty()
-            normalizedType.contains("image") -> "\uD83D\uDCF7 Imagen"
+            normalizedType.contains("image") -> "Imagen"
             normalizedType.startsWith("media") -> "\uD83D\uDCCE Archivo cifrado"
             body.text != null -> body.text
             else -> "\uD83D\uDCCE Archivo cifrado"

@@ -5,11 +5,13 @@ import android.util.Base64
 import com.example.texty.crypto.KeyManager
 import com.example.texty.model.KeyBundle
 import com.example.texty.model.User
+import com.google.android.gms.tasks.Tasks
 import com.google.crypto.tink.subtle.X25519
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.Transaction
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.nio.charset.StandardCharsets
@@ -24,6 +26,7 @@ class ChatRoomRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
     private val roomsCollection = firestore.collection("rooms")
+    private val usersCollection = firestore.collection("users")
     private val random = SecureRandom()
 
     fun createGroup(
@@ -105,6 +108,7 @@ class ChatRoomRepository(
         members: List<User>,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
+        includeInitiatorInRecipients: Boolean = true,
     ) {
         val keyManager = KeyManager(context)
         val keyGenerationResult = keyManager.ensureKeyBundle()
@@ -116,14 +120,20 @@ class ChatRoomRepository(
             }
 
         val groupKeyMaterial = generateGroupSenderKey()
+        val targetMembers = if (includeInitiatorInRecipients) {
+            members
+        } else {
+            members.filter { it.uid != initiatorUid }
+        }
         val groupKeyWriteSet = try {
             buildEncryptedGroupKeyWriteSet(
                 creatorUid = initiatorUid,
                 creatorDisplayName = initiatorDisplayName,
                 creatorBundle = initiatorBundle,
                 creatorPrivateIdentityKey = initiatorPrivateKey,
-                participants = members,
+                participants = targetMembers,
                 groupKey = groupKeyMaterial,
+                includeCreator = includeInitiatorInRecipients,
             )
         } catch (error: Exception) {
             onFailure(error)
@@ -170,6 +180,87 @@ class ChatRoomRepository(
             .addOnFailureListener(onFailure)
     }
 
+    fun leaveGroup(
+        context: Context,
+        roomId: String,
+        leaverUid: String,
+        leaverDisplayName: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit,
+    ) {
+        val roomRef = roomsCollection.document(roomId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(roomRef)
+            if (!snapshot.exists()) {
+                return@runTransaction LeaveGroupTransactionResult(emptyList(), false)
+            }
+
+            val isGroup = snapshot.getBoolean("isGroup") ?: false
+            if (!isGroup) {
+                throw IllegalStateException("Room $roomId is not a group chat")
+            }
+
+            val participantIds = (snapshot.get("participantIds") as? List<*>)
+                ?.mapNotNull { it as? String }
+                ?: emptyList()
+
+            if (!participantIds.contains(leaverUid)) {
+                return@runTransaction LeaveGroupTransactionResult(participantIds, false)
+            }
+
+            val remaining = participantIds.filter { it != leaverUid }
+
+            val updates = mutableMapOf<String, Any>(
+                "participantIds" to remaining,
+                "updatedAt" to FieldValue.serverTimestamp(),
+            )
+            updates["userNames.$leaverUid"] = FieldValue.delete()
+            updates["unreadCounts.$leaverUid"] = FieldValue.delete()
+
+            transaction.update(roomRef, updates)
+
+            val groupKeyRef = roomRef.collection(GROUP_KEYS_SUBCOLLECTION).document(leaverUid)
+            transaction.delete(groupKeyRef)
+
+            val userStateRef = roomRef.collection("userState").document(leaverUid)
+            transaction.delete(userStateRef)
+
+            LeaveGroupTransactionResult(remaining, true)
+        }.addOnSuccessListener { result ->
+            if (!result.changed) {
+                onSuccess()
+                return@addOnSuccessListener
+            }
+
+            if (result.remainingParticipantIds.isEmpty()) {
+                onSuccess()
+                return@addOnSuccessListener
+            }
+
+            fetchUsersByIds(result.remainingParticipantIds,
+                onSuccess = { members ->
+                    if (members.isEmpty()) {
+                        onSuccess()
+                        return@fetchUsersByIds
+                    }
+
+                    rotateGroupKey(
+                        context = context,
+                        roomId = roomId,
+                        initiatorUid = leaverUid,
+                        initiatorDisplayName = leaverDisplayName,
+                        members = members,
+                        onSuccess = onSuccess,
+                        onFailure = onFailure,
+                        includeInitiatorInRecipients = false,
+                    )
+                },
+                onFailure = onFailure,
+            )
+        }.addOnFailureListener(onFailure)
+    }
+
     private fun generateGroupSenderKey(): ByteArray = ByteArray(GROUP_KEY_SIZE).apply {
         random.nextBytes(this)
     }
@@ -181,6 +272,7 @@ class ChatRoomRepository(
         creatorPrivateIdentityKey: ByteArray,
         participants: List<User>,
         groupKey: ByteArray,
+        includeCreator: Boolean = true,
     ): GroupKeyWriteSet {
         val creatorUser = User(
             uid = creatorUid,
@@ -193,7 +285,11 @@ class ChatRoomRepository(
             oneTimePreKeys = creatorBundle.oneTimePreKeys,
         )
 
-        val participantList = (participants + creatorUser).distinctBy { it.uid }
+        val participantList = if (includeCreator) {
+            (participants + creatorUser).distinctBy { it.uid }
+        } else {
+            participants.distinctBy { it.uid }
+        }
         if (participantList.isEmpty()) {
             throw IllegalArgumentException("A group must contain at least one participant")
         }
@@ -355,6 +451,36 @@ class ChatRoomRepository(
         val payloads: Map<String, MutableMap<String, Any?>>, // uid -> encrypted payload
         val keyFingerprint: String,
     )
+
+    private data class LeaveGroupTransactionResult(
+        val remainingParticipantIds: List<String>,
+        val changed: Boolean,
+    )
+
+    private fun fetchUsersByIds(
+        uids: List<String>,
+        onSuccess: (List<User>) -> Unit,
+        onFailure: (Exception) -> Unit,
+    ) {
+        val distinctIds = uids.distinct()
+        if (distinctIds.isEmpty()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        val tasks = distinctIds.chunked(10).map { chunk ->
+            usersCollection.whereIn("uid", chunk).get()
+        }
+
+        Tasks.whenAllSuccess<QuerySnapshot>(tasks)
+            .addOnSuccessListener { snapshots ->
+                val users = snapshots
+                    .flatMap { it.toObjects(User::class.java) }
+                    .filter { distinctIds.contains(it.uid) }
+                onSuccess(users)
+            }
+            .addOnFailureListener(onFailure)
+    }
 
     companion object {
         private const val GROUP_KEYS_SUBCOLLECTION = "groupKeys"

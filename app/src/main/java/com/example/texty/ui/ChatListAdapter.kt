@@ -42,7 +42,7 @@ class ChatListAdapter(
 
         // Nombre (grupo o individual)
         holder.nameText.text = if (room.isGroup) {
-            room.groupName ?: "Grupo sin nombre"
+            room.groupName ?: context.getString(R.string.chat_group_default_name)
         } else {
             val currentUserUid = Firebase.auth.currentUser?.uid
             val otherUid = room.participantIds.firstOrNull { it != currentUserUid }

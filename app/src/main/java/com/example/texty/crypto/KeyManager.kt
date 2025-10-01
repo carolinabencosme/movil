@@ -12,6 +12,8 @@ import com.google.crypto.tink.config.TinkConfig
 import com.google.crypto.tink.subtle.Ed25519Sign
 import com.google.crypto.tink.subtle.X25519
 import java.security.GeneralSecurityException
+import java.security.KeyStore
+import javax.crypto.AEADBadTagException
 import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
@@ -50,17 +52,47 @@ class KeyManager(context: Context) {
             throw IllegalStateException("Unable to initialise Tink", e)
         }
 
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
+        // ⬇️ NUEVO: creación con recuperación automática
+        prefs = buildSecurePrefs(context)
+    }
 
-        prefs = EncryptedSharedPreferences.create(
-            context,
-            PREFS_NAME,
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+    /** Crea EncryptedSharedPreferences y, si hay corrupción de clave, hace reset controlado. */
+    private fun buildSecurePrefs(context: Context): SharedPreferences {
+        fun create(): SharedPreferences {
+            val masterKey = MasterKey.Builder(context, MASTER_ALIAS)
+                .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                // .setRequestStrongBoxBacked(false) // descomentar si en tu parque hay fallas con StrongBox
+                .build()
+
+            return EncryptedSharedPreferences.create(
+                context,
+                PREFS_NAME,
+                masterKey,
+                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        }
+
+        return try {
+            create()
+        } catch (e: Exception) {
+            val isCorruption = e is AEADBadTagException ||
+                    generateSequence(e as Throwable?) { it?.cause }.any {
+                        it is AEADBadTagException ||
+                                (it?.message?.contains("MAC verification failed", true) == true)
+                    }
+            if (!isCorruption) throw e
+
+            // Reset controlado: borra alias del Keystore y el prefs cifrado
+            try {
+                val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+                if (ks.containsAlias(MASTER_ALIAS)) ks.deleteEntry(MASTER_ALIAS)
+            } catch (_: Exception) { /* opcional: log */ }
+
+            context.deleteSharedPreferences(PREFS_NAME)
+
+            create()
+        }
     }
 
     fun ensureKeyBundle(minOneTimePreKeys: Int = DEFAULT_ONE_TIME_PRE_KEY_POOL_SIZE): KeyGenerationResult {
@@ -326,6 +358,8 @@ class KeyManager(context: Context) {
         const val MIN_ONE_TIME_PRE_KEY_THRESHOLD = 5
 
         private const val PREFS_NAME = "com.example.texty.keys"
+        private const val MASTER_ALIAS = MasterKey.DEFAULT_MASTER_KEY_ALIAS
+
         private const val PREF_IDENTITY_PUBLIC = "identity_public"
         private const val PREF_IDENTITY_PRIVATE = "identity_private"
         private const val PREF_IDENTITY_SIGNING_PUBLIC = "identity_signing_public"

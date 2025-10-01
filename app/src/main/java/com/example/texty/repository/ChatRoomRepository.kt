@@ -7,6 +7,8 @@ import com.example.texty.model.KeyBundle
 import com.example.texty.model.User
 import com.google.android.gms.tasks.Tasks
 import com.google.crypto.tink.subtle.X25519
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -144,10 +146,24 @@ class ChatRoomRepository(
         val roomRef = roomsCollection.document(roomId)
 
         firestore.runTransaction { transaction ->
+            data class PayloadSnapshot(
+                val docRef: DocumentReference,
+                val uid: String,
+                val payload: Map<String, Any?>,
+                val existingSnapshot: DocumentSnapshot,
+            )
+
             val snapshot = transaction.get(roomRef)
             val currentVersion = snapshot.getLong("groupKeyVersion")?.toInt()
                 ?: INITIAL_GROUP_KEY_VERSION
             val newVersion = currentVersion + 1
+
+            val keyCollection = roomRef.collection(GROUP_KEYS_SUBCOLLECTION)
+            val payloadSnapshots = groupKeyWriteSet.payloads.map { (uid, payload) ->
+                val docRef = keyCollection.document(uid)
+                val existingSnapshot = transaction.get(docRef)
+                PayloadSnapshot(docRef, uid, payload, existingSnapshot)
+            }
 
             transaction.update(
                 roomRef,
@@ -158,22 +174,19 @@ class ChatRoomRepository(
                 ),
             )
 
-            val keyCollection = roomRef.collection(GROUP_KEYS_SUBCOLLECTION)
-            groupKeyWriteSet.payloads.forEach { (uid, payload) ->
-                val docRef = keyCollection.document(uid)
-                val existing = transaction.get(docRef)
-                val data = payload.toMutableMap()
-                data["recipientUid"] = uid
+            payloadSnapshots.forEach { payloadSnapshot ->
+                val data = payloadSnapshot.payload.toMutableMap()
+                data["recipientUid"] = payloadSnapshot.uid
                 data["roomId"] = roomId
                 data["senderUid"] = initiatorUid
                 data["keyVersion"] = newVersion
                 data["groupKeyFingerprint"] = groupKeyWriteSet.keyFingerprint
                 data["updatedAt"] = FieldValue.serverTimestamp()
-                if (!existing.exists()) {
+                if (!payloadSnapshot.existingSnapshot.exists()) {
                     data["createdAt"] = FieldValue.serverTimestamp()
                 }
                 data.entries.removeIf { it.value == null }
-                transaction.set(docRef, data, SetOptions.merge())
+                transaction.set(payloadSnapshot.docRef, data, SetOptions.merge())
             }
 
             null

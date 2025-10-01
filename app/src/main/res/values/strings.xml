@@ -62,6 +62,12 @@
     <string name="chat_message_hint">Escribe un mensaje</string>
     <string name="chat_action_send">Enviar</string>
     <string name="chat_group_default_name">Grupo sin nombre</string>
+    <string name="chat_add_members_action">Agregar miembros</string>
+    <string name="chat_add_members_title">Agregar integrantes</string>
+    <string name="chat_add_members_confirm">Agregar</string>
+    <string name="chat_add_members_success">Se agregaron los nuevos miembros.</string>
+    <string name="chat_add_members_error">No se pudieron agregar los miembros.</string>
+    <string name="chat_add_members_empty">Todos tus amigos ya están en el grupo.</string>
     <string name="chat_leave_group_action">Salir del grupo</string>
     <string name="chat_leave_group_title">¿Salir del grupo?</string>
     <string name="chat_leave_group_message">Ya no recibirás mensajes de %1$s. ¿Deseas salir?</string>

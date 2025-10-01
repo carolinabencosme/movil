@@ -256,10 +256,11 @@ class ChatRoomRepository(
 
             val updatedParticipants = (currentParticipants + distinctNewMembers.map { it.uid }).distinct()
 
-            val userNames = (snapshot.get("userNames") as? Map<*, *>)
+            val existingUserNames = (snapshot.get("userNames") as? Map<*, *>)
                 ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
-                ?.toMutableMap()
-                ?: mutableMapOf()
+                ?.associate { it }
+
+            val userNames = existingUserNames?.toMutableMap() ?: mutableMapOf<String, String>()
 
             distinctNewMembers.forEach { member ->
                 userNames[member.uid] = member.displayName.ifBlank { member.uid }

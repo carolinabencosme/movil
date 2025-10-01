@@ -142,7 +142,7 @@ class ChatActivity : AppCompatActivity() {
         if (isFriend) {
           initChat(currentUser.uid, recipientUid!!, recipientName!!, false)
         } else {
-          Toast.makeText(this, R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+          showStatusMessage(R.string.error_not_friends)
           finish()
         }
       }
@@ -252,7 +252,7 @@ class ChatActivity : AppCompatActivity() {
       messageMapper = MessageMapper(sessionInfo)
 
       if (sessionInfo?.requiresReauth == true) {
-        Toast.makeText(this@ChatActivity, R.string.chat_session_requires_resync, Toast.LENGTH_LONG).show()
+        showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)
       }
 
       sendButton.isEnabled = true
@@ -339,14 +339,14 @@ class ChatActivity : AppCompatActivity() {
       leaverDisplayName = currentUser.displayName ?: currentUser.uid,
       onSuccess = {
         runOnUiThread {
-          Toast.makeText(this, R.string.chat_leave_group_success, Toast.LENGTH_SHORT).show()
+          showStatusMessage(R.string.chat_leave_group_success)
           finish()
         }
       },
       onFailure = { error ->
         AppLogger.logError(this, error); ErrorLogger.log(this, error)
         runOnUiThread {
-          Toast.makeText(this, R.string.chat_leave_group_error, Toast.LENGTH_LONG).show()
+          showStatusMessage(R.string.chat_leave_group_error, Toast.LENGTH_LONG)
         }
       }
     )
@@ -368,7 +368,7 @@ class ChatActivity : AppCompatActivity() {
 
         runOnUiThread {
           if (available.isEmpty()) {
-            Toast.makeText(this, R.string.chat_add_members_empty, Toast.LENGTH_SHORT).show()
+            showStatusMessage(R.string.chat_add_members_empty)
             return@runOnUiThread
           }
 
@@ -494,6 +494,11 @@ class ChatActivity : AppCompatActivity() {
     Toast.makeText(applicationContext, messageResId, duration).show()
   }
 
+  private fun showStatusMessage(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+    if (isFinishing || isDestroyed) return
+    Toast.makeText(applicationContext, message, duration).show()
+  }
+
 
   private suspend fun ensureSessionForDirectChat(currentUid: String, peerUid: String): SessionKeyInfo? {
     val rid = roomId ?: listOf(currentUid, peerUid).sorted().joinToString("_")
@@ -577,11 +582,7 @@ class ChatActivity : AppCompatActivity() {
                                 recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
                             }
                         } else {
-                            Toast.makeText(
-                                this@ChatActivity,
-                                R.string.chat_session_requires_resync,
-                                Toast.LENGTH_LONG
-                            ).show()
+                            showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)
                         }
                     }
                 }
@@ -627,7 +628,7 @@ class ChatActivity : AppCompatActivity() {
   ) {
     val sessionInfo = sessionKeyInfo
     if (sessionInfo?.rootKey == null) {
-      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      showStatusMessage(R.string.chat_session_missing_keys, Toast.LENGTH_LONG)
       return
     }
 
@@ -643,7 +644,7 @@ class ChatActivity : AppCompatActivity() {
       withContext(Dispatchers.Default) { MessageCrypto.encrypt(sessionInfo, body, metadata) }
     } catch (e: Exception) {
       AppLogger.logError(this, e); ErrorLogger.log(this, e)
-      Toast.makeText(this, R.string.chat_message_encrypt_error, Toast.LENGTH_SHORT).show()
+      showStatusMessage(R.string.chat_message_encrypt_error)
       return
     }
 
@@ -685,7 +686,7 @@ class ChatActivity : AppCompatActivity() {
       }
     } catch (e: Exception) {
       AppLogger.logError(this, e); ErrorLogger.log(this, e)
-      Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+      showStatusMessage(R.string.chat_message_send_error)
       return
     }
 
@@ -732,7 +733,7 @@ class ChatActivity : AppCompatActivity() {
   ) {
     val sessionInfo = sessionKeyInfo
     if (sessionInfo?.rootKey == null) {
-      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      showStatusMessage(R.string.chat_session_missing_keys, Toast.LENGTH_LONG)
       return
     }
 
@@ -751,10 +752,10 @@ class ChatActivity : AppCompatActivity() {
         }
       } catch (e: Exception) {
         AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       } ?: run {
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       }
 
@@ -765,7 +766,7 @@ class ChatActivity : AppCompatActivity() {
         }
       } catch (e: Exception) {
         AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       } finally { encryptedAttachment.clearCiphertext() }
 

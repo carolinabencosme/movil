@@ -25,6 +25,8 @@ import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
 
+    private var suppressNavigationHandling = false
+
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -89,12 +91,37 @@ class MainActivity : AppCompatActivity() {
         }
 
         bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.navigation_chats -> { replaceFragment(ChatListFragment()); true }
-                R.id.navigation_search -> { replaceFragment(SearchUserFragment()); true }
-                R.id.navigation_requests -> { replaceFragment(FriendRequestsFragment()); true }
-                R.id.navigation_profile -> { replaceFragment(ProfileFragment()); true }
-                else -> false
+            if (suppressNavigationHandling) {
+                suppressNavigationHandling = false
+                return@setOnItemSelectedListener true
+            }
+
+            val targetFragment = when (item.itemId) {
+                R.id.navigation_chats -> ChatListFragment()
+                R.id.navigation_search -> SearchUserFragment()
+                R.id.navigation_requests -> FriendRequestsFragment()
+                R.id.navigation_profile -> ProfileFragment()
+                else -> null
+            } ?: return@setOnItemSelectedListener false
+
+            val currentFragment = supportFragmentManager.findFragmentById(R.id.fragmentContainer)
+
+            fun performNavigation() {
+                replaceFragment(targetFragment)
+                if (bottomNav.selectedItemId == item.itemId) {
+                    suppressNavigationHandling = false
+                } else {
+                    suppressNavigationHandling = true
+                    bottomNav.selectedItemId = item.itemId
+                }
+            }
+
+            if (currentFragment is PendingChangesHandler && currentFragment.hasPendingChanges()) {
+                currentFragment.onAttemptExit { performNavigation() }
+                false
+            } else {
+                replaceFragment(targetFragment)
+                true
             }
         }
     }

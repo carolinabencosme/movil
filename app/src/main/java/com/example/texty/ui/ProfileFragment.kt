@@ -16,6 +16,7 @@ import com.bumptech.glide.Glide
 import com.example.texty.R
 import com.example.texty.model.User
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.userProfileChangeRequest
@@ -185,9 +186,16 @@ class ProfileFragment : Fragment() {
         }
 
         buttonLogout.setOnClickListener {
-            FirebaseAuth.getInstance().signOut()
-            startActivity(Intent(requireContext(), LoginActivity::class.java))
-            requireActivity().finish()
+            MaterialAlertDialogBuilder(requireContext())
+                .setTitle(R.string.logout_confirmation_title)
+                .setMessage(R.string.logout_confirmation_message)
+                .setNegativeButton(R.string.cancel, null)
+                .setPositiveButton(R.string.logout) { _, _ ->
+                    FirebaseAuth.getInstance().signOut()
+                    startActivity(Intent(requireContext(), LoginActivity::class.java))
+                    requireActivity().finish()
+                }
+                .show()
         }
     }
 }

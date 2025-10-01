@@ -61,7 +61,7 @@ class ChatListFragment : Fragment() {
                 val intent = Intent(requireContext(), ChatActivity::class.java).apply {
                     putExtra("roomId", room.id)
                     putExtra("isGroup", true)
-                    putExtra("groupName", room.groupName ?: "Grupo sin nombre")
+                    putExtra("groupName", room.groupName ?: getString(R.string.chat_group_default_name))
                 }
                 startActivity(intent)
             } else {

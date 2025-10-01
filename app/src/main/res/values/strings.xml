@@ -61,6 +61,13 @@
     <string name="chat_add_image">Adjuntar imagen</string>
     <string name="chat_message_hint">Escribe un mensaje</string>
     <string name="chat_action_send">Enviar</string>
+    <string name="chat_group_default_name">Grupo sin nombre</string>
+    <string name="chat_leave_group_action">Salir del grupo</string>
+    <string name="chat_leave_group_title">¿Salir del grupo?</string>
+    <string name="chat_leave_group_message">Ya no recibirás mensajes de %1$s. ¿Deseas salir?</string>
+    <string name="chat_leave_group_confirm">Salir</string>
+    <string name="chat_leave_group_success">Saliste del grupo.</string>
+    <string name="chat_leave_group_error">No se pudo salir del grupo. Inténtalo de nuevo.</string>
     <string name="notification_generic_title">Nuevo mensaje</string>
     <string name="notification_generic_body">Tienes un mensaje nuevo</string>
     <string name="permissions_title">Permisos necesarios</string>

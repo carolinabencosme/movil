@@ -7,6 +7,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -20,6 +22,7 @@ import com.example.texty.R
 import com.example.texty.NotificationCounter
 import com.example.texty.model.MessageBody
 import com.example.texty.model.SessionKeyInfo
+import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.FriendRequestRepository
 import com.example.texty.repository.MessageMapper
 import com.example.texty.repository.SessionKeyRepository
@@ -29,6 +32,7 @@ import com.example.texty.util.ErrorLogger
 import com.example.texty.util.MessageCrypto
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
@@ -68,6 +72,7 @@ class ChatActivity : AppCompatActivity() {
 
 
   private val sessionKeyRepository = SessionKeyRepository()
+  private val chatRoomRepository = ChatRoomRepository()
   private var sessionKeyInfo: SessionKeyInfo? = null
   private var messageMapper: MessageMapper? = null
   private val bannerHandler = Handler(Looper.getMainLooper())
@@ -113,7 +118,7 @@ class ChatActivity : AppCompatActivity() {
         AppLogger.logError(this, e); ErrorLogger.log(this, e)
         finish(); return
       }
-      initChat(currentUser.uid, null, groupName ?: "Grupo sin nombre", true)
+      initChat(currentUser.uid, null, groupName ?: getString(R.string.chat_group_default_name), true)
     } else {
       recipientUid = intent.getStringExtra("recipientUid")
       recipientName = intent.getStringExtra("recipientName")
@@ -142,6 +147,7 @@ class ChatActivity : AppCompatActivity() {
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = title
+    invalidateOptionsMenu()
 
     messageBanner = findViewById(R.id.messageBanner)
     messageBannerTitle = messageBanner.findViewById(R.id.messageBannerTitle)
@@ -239,6 +245,64 @@ class ChatActivity : AppCompatActivity() {
         )
       }
     }
+  }
+
+  override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    if (isGroup) {
+      menuInflater.inflate(R.menu.menu_chat_group, menu)
+      return true
+    }
+    return super.onCreateOptionsMenu(menu)
+  }
+
+  override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    return when (item.itemId) {
+      android.R.id.home -> {
+        finish()
+        true
+      }
+      R.id.action_leave_group -> {
+        showLeaveGroupConfirmation()
+        true
+      }
+      else -> super.onOptionsItemSelected(item)
+    }
+  }
+
+  private fun showLeaveGroupConfirmation() {
+    val resolvedGroupName = groupName ?: getString(R.string.chat_group_default_name)
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.chat_leave_group_title)
+      .setMessage(getString(R.string.chat_leave_group_message, resolvedGroupName))
+      .setPositiveButton(R.string.chat_leave_group_confirm) { _, _ ->
+        performLeaveGroup()
+      }
+      .setNegativeButton(R.string.cancel, null)
+      .show()
+  }
+
+  private fun performLeaveGroup() {
+    val currentUser = Firebase.auth.currentUser ?: return
+    val activeRoomId = roomId ?: return
+
+    chatRoomRepository.leaveGroup(
+      context = this,
+      roomId = activeRoomId,
+      leaverUid = currentUser.uid,
+      leaverDisplayName = currentUser.displayName ?: currentUser.uid,
+      onSuccess = {
+        runOnUiThread {
+          Toast.makeText(this, R.string.chat_leave_group_success, Toast.LENGTH_SHORT).show()
+          finish()
+        }
+      },
+      onFailure = { error ->
+        AppLogger.logError(this, error); ErrorLogger.log(this, error)
+        runOnUiThread {
+          Toast.makeText(this, R.string.chat_leave_group_error, Toast.LENGTH_LONG).show()
+        }
+      }
+    )
   }
 
 

@@ -13,6 +13,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AlertDialog
 import androidx.collection.LruCache
@@ -441,7 +442,7 @@ class ChatActivity : AppCompatActivity() {
             addButton.setOnClickListener {
               val selectedUsers = adapter.getSelectedUsers()
               if (selectedUsers.isEmpty()) {
-                Toast.makeText(this, R.string.error_group_members_required, Toast.LENGTH_SHORT).show()
+                showStatusMessage(R.string.error_group_members_required)
                 return@setOnClickListener
               }
 
@@ -455,7 +456,7 @@ class ChatActivity : AppCompatActivity() {
                 newMembers = selectedUsers,
                 onSuccess = {
                   runOnUiThread {
-                    Toast.makeText(this, R.string.chat_add_members_success, Toast.LENGTH_SHORT).show()
+                    showStatusMessage(R.string.chat_add_members_success)
                     dialog.dismiss()
                   }
                 },
@@ -463,7 +464,7 @@ class ChatActivity : AppCompatActivity() {
                   AppLogger.logError(this, error)
                   ErrorLogger.log(this, error)
                   runOnUiThread {
-                    Toast.makeText(this, R.string.chat_add_members_error, Toast.LENGTH_LONG).show()
+                    showStatusMessage(R.string.chat_add_members_error, Toast.LENGTH_LONG)
                     addButton.isEnabled = true
                   }
                 },
@@ -482,10 +483,15 @@ class ChatActivity : AppCompatActivity() {
         AppLogger.logError(this, error)
         ErrorLogger.log(this, error)
         runOnUiThread {
-          Toast.makeText(this, R.string.chat_add_members_error, Toast.LENGTH_LONG).show()
+          showStatusMessage(R.string.chat_add_members_error, Toast.LENGTH_LONG)
         }
       },
     )
+  }
+
+  private fun showStatusMessage(@StringRes messageResId: Int, duration: Int = Toast.LENGTH_SHORT) {
+    if (isFinishing || isDestroyed) return
+    Toast.makeText(applicationContext, messageResId, duration).show()
   }
 
 

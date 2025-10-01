@@ -21,7 +21,9 @@ import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.ktx.Firebase
 
@@ -59,7 +61,7 @@ class ChatListFragment : Fragment() {
                 val intent = Intent(requireContext(), ChatActivity::class.java).apply {
                     putExtra("roomId", room.id)
                     putExtra("isGroup", true)
-                    putExtra("groupName", room.groupName ?: "Grupo sin nombre")
+                    putExtra("groupName", room.groupName ?: getString(R.string.chat_group_default_name))
                 }
                 startActivity(intent)
             } else {
@@ -244,6 +246,7 @@ class ChatListFragment : Fragment() {
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_create_group, null)
         val recycler = dialogView.findViewById<RecyclerView>(R.id.recyclerFriends)
         val editGroupName = dialogView.findViewById<TextInputEditText>(R.id.editGroupName)
+        val groupNameLayout = dialogView.findViewById<TextInputLayout>(R.id.groupNameLayout)
         val searchInput = dialogView.findViewById<TextInputEditText>(R.id.editSearchFriends)
 
         recycler.layoutManager = LinearLayoutManager(context)
@@ -297,12 +300,36 @@ class ChatListFragment : Fragment() {
             val dialog = androidx.appcompat.app.AlertDialog.Builder(context)
                 .setTitle("Nuevo grupo")
                 .setView(dialogView)
-                .setPositiveButton("Crear") { d, _ ->
+                .setPositiveButton("Crear", null)
+                .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
+                .create()
+
+            dialog.setOnShowListener {
+                val createButton = dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE)
+                createButton.isEnabled = !editGroupName.text.isNullOrBlank()
+
+                editGroupName.addTextChangedListener { text ->
+                    groupNameLayout.error = null
+                    createButton.isEnabled = !text.isNullOrBlank()
+                }
+
+                createButton.setOnClickListener {
                     val groupName = editGroupName.text?.toString()?.trim().orEmpty()
-                    if (groupName.isBlank() || selectedFriends.isEmpty()) {
-                        AppLogger.logError(context, Exception("Falta nombre o miembros"))
-                        return@setPositiveButton
+                    var isValid = true
+
+                    if (groupName.isBlank()) {
+                        groupNameLayout.error = getString(R.string.error_group_name_required)
+                        isValid = false
+                    } else {
+                        groupNameLayout.error = null
                     }
+
+                    if (selectedFriends.isEmpty()) {
+                        Snackbar.make(dialogView, R.string.error_group_members_required, Snackbar.LENGTH_SHORT).show()
+                        isValid = false
+                    }
+
+                    if (!isValid) return@setOnClickListener
 
                     // Construir ChatRoom
                     val selectedUsers = friends.filter { selectedFriends.contains(it.uid) }
@@ -323,10 +350,9 @@ class ChatListFragment : Fragment() {
                         },
                     )
 
-                    d.dismiss()
+                    dialog.dismiss()
                 }
-                .setNegativeButton("Cancelar") { d, _ -> d.dismiss() }
-                .create()
+            }
 
             dialog.show()
 

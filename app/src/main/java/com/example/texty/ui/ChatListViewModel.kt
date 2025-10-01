@@ -64,6 +64,8 @@ class ChatListViewModel : ViewModel() {
                 val documents = value?.documents.orEmpty()
                 val seenRoomIds = mutableSetOf<String>()
 
+                val ownerUid = currentUserUid ?: return@addSnapshotListener
+
                 documents.forEach { doc ->
 
                     // --- Campos base del room ---
@@ -71,6 +73,14 @@ class ChatListViewModel : ViewModel() {
                         ?.mapNotNull { it as? String }
                         ?.distinct()
                         ?: emptyList()
+
+                    if (!participantIds.contains(ownerUid)) {
+                        baseRooms.remove(doc.id)
+                        summaryStates.remove(doc.id)
+                        sessionCache.remove(doc.id)
+                        userStateListeners.remove(doc.id)?.remove()
+                        return@forEach
+                    }
 
                     val userNames = (doc.get("userNames") as? Map<*, *>)
                         ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
@@ -89,7 +99,7 @@ class ChatListViewModel : ViewModel() {
                     }.toMap()
 
                     // --- Foto (avatar): otro usuario en 1:1 o foto de grupo si existe ---
-                    val currentUid = currentUserUid
+                    val currentUid = ownerUid
                     val otherUid = if (!isGroup) participantIds.firstOrNull { it != currentUid } else null
                     val groupPhoto = doc.getString("groupPhotoUrl") // opcional, si lo guardas en el room
 

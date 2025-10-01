@@ -5,11 +5,14 @@ import android.util.Base64
 import com.example.texty.crypto.KeyManager
 import com.example.texty.model.KeyBundle
 import com.example.texty.model.User
+import com.google.android.gms.tasks.Tasks
 import com.google.crypto.tink.subtle.X25519
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
-import com.google.firebase.firestore.Transaction
+import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import java.nio.charset.StandardCharsets
@@ -24,6 +27,7 @@ class ChatRoomRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
     private val roomsCollection = firestore.collection("rooms")
+    private val usersCollection = firestore.collection("users")
     private val random = SecureRandom()
 
     fun createGroup(
@@ -74,6 +78,8 @@ class ChatRoomRepository(
             "updatedAt" to FieldValue.serverTimestamp(),
             "groupKeyVersion" to INITIAL_GROUP_KEY_VERSION,
             "groupKeyMaterialFingerprint" to groupKeyWriteSet.keyFingerprint,
+            "creatorUid" to creatorUid,
+            "adminIds" to listOf(creatorUid),
         )
 
         firestore.runBatch { batch ->
@@ -105,6 +111,7 @@ class ChatRoomRepository(
         members: List<User>,
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
+        includeInitiatorInRecipients: Boolean = true,
     ) {
         val keyManager = KeyManager(context)
         val keyGenerationResult = keyManager.ensureKeyBundle()
@@ -116,14 +123,20 @@ class ChatRoomRepository(
             }
 
         val groupKeyMaterial = generateGroupSenderKey()
+        val targetMembers = if (includeInitiatorInRecipients) {
+            members
+        } else {
+            members.filter { it.uid != initiatorUid }
+        }
         val groupKeyWriteSet = try {
             buildEncryptedGroupKeyWriteSet(
                 creatorUid = initiatorUid,
                 creatorDisplayName = initiatorDisplayName,
                 creatorBundle = initiatorBundle,
                 creatorPrivateIdentityKey = initiatorPrivateKey,
-                participants = members,
+                participants = targetMembers,
                 groupKey = groupKeyMaterial,
+                includeCreator = includeInitiatorInRecipients,
             )
         } catch (error: Exception) {
             onFailure(error)
@@ -133,10 +146,24 @@ class ChatRoomRepository(
         val roomRef = roomsCollection.document(roomId)
 
         firestore.runTransaction { transaction ->
+            data class PayloadSnapshot(
+                val docRef: DocumentReference,
+                val uid: String,
+                val payload: Map<String, Any?>,
+                val existingSnapshot: DocumentSnapshot,
+            )
+
             val snapshot = transaction.get(roomRef)
             val currentVersion = snapshot.getLong("groupKeyVersion")?.toInt()
                 ?: INITIAL_GROUP_KEY_VERSION
             val newVersion = currentVersion + 1
+
+            val keyCollection = roomRef.collection(GROUP_KEYS_SUBCOLLECTION)
+            val payloadSnapshots = groupKeyWriteSet.payloads.map { (uid, payload) ->
+                val docRef = keyCollection.document(uid)
+                val existingSnapshot = transaction.get(docRef)
+                PayloadSnapshot(docRef, uid, payload, existingSnapshot)
+            }
 
             transaction.update(
                 roomRef,
@@ -147,27 +174,268 @@ class ChatRoomRepository(
                 ),
             )
 
-            val keyCollection = roomRef.collection(GROUP_KEYS_SUBCOLLECTION)
-            groupKeyWriteSet.payloads.forEach { (uid, payload) ->
-                val docRef = keyCollection.document(uid)
-                val existing = transaction.get(docRef)
-                val data = payload.toMutableMap()
-                data["recipientUid"] = uid
+            payloadSnapshots.forEach { payloadSnapshot ->
+                val data = payloadSnapshot.payload.toMutableMap()
+                data["recipientUid"] = payloadSnapshot.uid
                 data["roomId"] = roomId
                 data["senderUid"] = initiatorUid
                 data["keyVersion"] = newVersion
                 data["groupKeyFingerprint"] = groupKeyWriteSet.keyFingerprint
                 data["updatedAt"] = FieldValue.serverTimestamp()
-                if (!existing.exists()) {
+                if (!payloadSnapshot.existingSnapshot.exists()) {
                     data["createdAt"] = FieldValue.serverTimestamp()
                 }
                 data.entries.removeIf { it.value == null }
-                transaction.set(docRef, data, SetOptions.merge())
+                transaction.set(payloadSnapshot.docRef, data, SetOptions.merge())
             }
 
             null
         }.addOnSuccessListener { onSuccess() }
             .addOnFailureListener(onFailure)
+    }
+
+    fun addMembers(
+        context: Context,
+        roomId: String,
+        initiatorUid: String,
+        initiatorDisplayName: String,
+        newMembers: List<User>,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit,
+    ) {
+        val sanitizedMembers = newMembers
+            .filter { it.uid.isNotBlank() }
+            .distinctBy { it.uid }
+
+        if (sanitizedMembers.isEmpty()) {
+            onSuccess()
+            return
+        }
+
+        val keyManager = KeyManager(context)
+        val keyGenerationResult = keyManager.ensureKeyBundle()
+        val initiatorBundle = keyGenerationResult.bundle
+        val initiatorPrivateKey = keyManager.getIdentityPrivateKey()
+            ?: run {
+                onFailure(IllegalStateException("Initiator identity key is missing"))
+                return
+            }
+
+        val roomRef = roomsCollection.document(roomId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(roomRef)
+            if (!snapshot.exists()) {
+                throw IllegalStateException("Room $roomId does not exist")
+            }
+
+            val isGroup = snapshot.getBoolean("isGroup") ?: false
+            if (!isGroup) {
+                throw IllegalStateException("Room $roomId is not a group chat")
+            }
+
+            val adminIds = (snapshot.get("adminIds") as? List<*>)
+                ?.mapNotNull { it as? String }
+                ?.filter { it.isNotBlank() }
+                ?.distinct()
+                ?: emptyList()
+
+            val creatorUid = snapshot.getString("creatorUid")
+
+            val currentParticipants = (snapshot.get("participantIds") as? List<*>)
+                ?.mapNotNull { it as? String }
+                ?.filter { it.isNotBlank() }
+                ?.distinct()
+                ?: emptyList()
+
+            val canManage = adminIds.contains(initiatorUid) || (!creatorUid.isNullOrBlank() && creatorUid == initiatorUid) || (adminIds.isEmpty() && creatorUid.isNullOrBlank() && currentParticipants.firstOrNull() == initiatorUid)
+
+            if (!canManage) {
+                throw SecurityException("User $initiatorUid is not allowed to add members")
+            }
+
+            val distinctNewMembers = sanitizedMembers.filter { member ->
+                !currentParticipants.contains(member.uid)
+            }
+
+            if (distinctNewMembers.isEmpty()) {
+                return@runTransaction AddMembersTransactionResult(
+                    addedMembers = emptyList(),
+                    participantIds = currentParticipants,
+                    groupKeyVersion = snapshot.getLong("groupKeyVersion")?.toInt()
+                        ?: INITIAL_GROUP_KEY_VERSION,
+                )
+            }
+
+            val updatedParticipants = (currentParticipants + distinctNewMembers.map { it.uid }).distinct()
+
+            val existingUserNames = (snapshot.get("userNames") as? Map<*, *>)
+                ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
+                ?.associate { it }
+
+            val userNames = existingUserNames?.toMutableMap() ?: mutableMapOf<String, String>()
+
+            distinctNewMembers.forEach { member ->
+                userNames[member.uid] = member.displayName.ifBlank { member.uid }
+            }
+
+            val updates = mutableMapOf<String, Any>(
+                "participantIds" to updatedParticipants,
+                "userNames" to userNames,
+                "updatedAt" to FieldValue.serverTimestamp(),
+            )
+
+            transaction.update(roomRef, updates)
+
+            val currentVersion = snapshot.getLong("groupKeyVersion")?.toInt()
+                ?: INITIAL_GROUP_KEY_VERSION
+
+            AddMembersTransactionResult(
+                addedMembers = distinctNewMembers,
+                participantIds = updatedParticipants,
+                groupKeyVersion = currentVersion,
+            )
+        }.addOnSuccessListener { result ->
+            if (result.addedMembers.isEmpty()) {
+                onSuccess()
+                return@addOnSuccessListener
+            }
+
+            val groupKeyMaterial = generateGroupSenderKey()
+            val writeSet = try {
+                buildEncryptedGroupKeyWriteSet(
+                    creatorUid = initiatorUid,
+                    creatorDisplayName = initiatorDisplayName,
+                    creatorBundle = initiatorBundle,
+                    creatorPrivateIdentityKey = initiatorPrivateKey,
+                    participants = result.addedMembers,
+                    groupKey = groupKeyMaterial,
+                    includeCreator = false,
+                )
+            } catch (error: Exception) {
+                onFailure(error)
+                return@addOnSuccessListener
+            }
+
+            firestore.runBatch { batch ->
+                val keyCollection = roomRef.collection(GROUP_KEYS_SUBCOLLECTION)
+                writeSet.payloads.forEach { (uid, payload) ->
+                    val data = payload.toMutableMap()
+                    data["recipientUid"] = uid
+                    data["roomId"] = roomId
+                    data["senderUid"] = initiatorUid
+                    data["keyVersion"] = result.groupKeyVersion
+                    data["groupKeyFingerprint"] = writeSet.keyFingerprint
+                    data["createdAt"] = FieldValue.serverTimestamp()
+                    data["updatedAt"] = FieldValue.serverTimestamp()
+                    data.entries.removeIf { it.value == null }
+                    batch.set(keyCollection.document(uid), data, SetOptions.merge())
+                }
+            }.addOnSuccessListener {
+                fetchUsersByIds(
+                    result.participantIds,
+                    onSuccess = { members ->
+                        val requiredIds = result.participantIds.toSet()
+                        val resolvedIds = members.map { it.uid }.toSet()
+                        if (!resolvedIds.containsAll(requiredIds)) {
+                            onFailure(IllegalStateException("Unable to load every participant for rotation"))
+                            return@fetchUsersByIds
+                        }
+                        rotateGroupKey(
+                            context = context,
+                            roomId = roomId,
+                            initiatorUid = initiatorUid,
+                            initiatorDisplayName = initiatorDisplayName,
+                            members = members,
+                            onSuccess = onSuccess,
+                            onFailure = onFailure,
+                        )
+                    },
+                    onFailure = onFailure,
+                )
+            }.addOnFailureListener(onFailure)
+        }.addOnFailureListener(onFailure)
+    }
+
+    fun leaveGroup(
+        context: Context,
+        roomId: String,
+        leaverUid: String,
+        leaverDisplayName: String,
+        onSuccess: () -> Unit,
+        onFailure: (Exception) -> Unit,
+    ) {
+        val roomRef = roomsCollection.document(roomId)
+
+        firestore.runTransaction { transaction ->
+            val snapshot = transaction.get(roomRef)
+            if (!snapshot.exists()) {
+                return@runTransaction LeaveGroupTransactionResult(emptyList(), false)
+            }
+
+            val isGroup = snapshot.getBoolean("isGroup") ?: false
+            if (!isGroup) {
+                throw IllegalStateException("Room $roomId is not a group chat")
+            }
+
+            val participantIds = (snapshot.get("participantIds") as? List<*>)
+                ?.mapNotNull { it as? String }
+                ?: emptyList()
+
+            if (!participantIds.contains(leaverUid)) {
+                return@runTransaction LeaveGroupTransactionResult(participantIds, false)
+            }
+
+            val remaining = participantIds.filter { it != leaverUid }
+
+            val updates = mutableMapOf<String, Any>(
+                "participantIds" to remaining,
+                "updatedAt" to FieldValue.serverTimestamp(),
+            )
+            updates["userNames.$leaverUid"] = FieldValue.delete()
+            updates["unreadCounts.$leaverUid"] = FieldValue.delete()
+
+            transaction.update(roomRef, updates)
+
+            val groupKeyRef = roomRef.collection(GROUP_KEYS_SUBCOLLECTION).document(leaverUid)
+            transaction.delete(groupKeyRef)
+
+            val userStateRef = roomRef.collection("userState").document(leaverUid)
+            transaction.delete(userStateRef)
+
+            LeaveGroupTransactionResult(remaining, true)
+        }.addOnSuccessListener { result ->
+            if (!result.changed) {
+                onSuccess()
+                return@addOnSuccessListener
+            }
+
+            if (result.remainingParticipantIds.isEmpty()) {
+                onSuccess()
+                return@addOnSuccessListener
+            }
+
+            fetchUsersByIds(result.remainingParticipantIds,
+                onSuccess = { members ->
+                    if (members.isEmpty()) {
+                        onSuccess()
+                        return@fetchUsersByIds
+                    }
+
+                    rotateGroupKey(
+                        context = context,
+                        roomId = roomId,
+                        initiatorUid = leaverUid,
+                        initiatorDisplayName = leaverDisplayName,
+                        members = members,
+                        onSuccess = onSuccess,
+                        onFailure = onFailure,
+                        includeInitiatorInRecipients = false,
+                    )
+                },
+                onFailure = onFailure,
+            )
+        }.addOnFailureListener(onFailure)
     }
 
     private fun generateGroupSenderKey(): ByteArray = ByteArray(GROUP_KEY_SIZE).apply {
@@ -181,6 +449,7 @@ class ChatRoomRepository(
         creatorPrivateIdentityKey: ByteArray,
         participants: List<User>,
         groupKey: ByteArray,
+        includeCreator: Boolean = true,
     ): GroupKeyWriteSet {
         val creatorUser = User(
             uid = creatorUid,
@@ -193,7 +462,11 @@ class ChatRoomRepository(
             oneTimePreKeys = creatorBundle.oneTimePreKeys,
         )
 
-        val participantList = (participants + creatorUser).distinctBy { it.uid }
+        val participantList = if (includeCreator) {
+            (participants + creatorUser).distinctBy { it.uid }
+        } else {
+            participants.distinctBy { it.uid }
+        }
         if (participantList.isEmpty()) {
             throw IllegalArgumentException("A group must contain at least one participant")
         }
@@ -355,6 +628,42 @@ class ChatRoomRepository(
         val payloads: Map<String, MutableMap<String, Any?>>, // uid -> encrypted payload
         val keyFingerprint: String,
     )
+
+    private data class LeaveGroupTransactionResult(
+        val remainingParticipantIds: List<String>,
+        val changed: Boolean,
+    )
+
+    private data class AddMembersTransactionResult(
+        val addedMembers: List<User>,
+        val participantIds: List<String>,
+        val groupKeyVersion: Int,
+    )
+
+    private fun fetchUsersByIds(
+        uids: List<String>,
+        onSuccess: (List<User>) -> Unit,
+        onFailure: (Exception) -> Unit,
+    ) {
+        val distinctIds = uids.distinct()
+        if (distinctIds.isEmpty()) {
+            onSuccess(emptyList())
+            return
+        }
+
+        val tasks = distinctIds.chunked(10).map { chunk ->
+            usersCollection.whereIn("uid", chunk).get()
+        }
+
+        Tasks.whenAllSuccess<QuerySnapshot>(tasks)
+            .addOnSuccessListener { snapshots ->
+                val users = snapshots
+                    .flatMap { it.toObjects(User::class.java) }
+                    .filter { distinctIds.contains(it.uid) }
+                onSuccess(users)
+            }
+            .addOnFailureListener(onFailure)
+    }
 
     companion object {
         private const val GROUP_KEYS_SUBCOLLECTION = "groupKeys"

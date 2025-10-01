@@ -7,28 +7,41 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
+import android.view.ViewGroup
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.app.AlertDialog
 import androidx.collection.LruCache
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.view.isVisible
+import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.core.app.NotificationManagerCompat
 import com.example.texty.R
 import com.example.texty.NotificationCounter
 import com.example.texty.model.MessageBody
 import com.example.texty.model.SessionKeyInfo
+import com.example.texty.model.User
+import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.FriendRequestRepository
 import com.example.texty.repository.MessageMapper
 import com.example.texty.repository.SessionKeyRepository
+import com.example.texty.repository.UserRepository
 import com.example.texty.util.AppLogger
 import com.example.texty.util.AttachmentCrypto
 import com.example.texty.util.ErrorLogger
 import com.example.texty.util.MessageCrypto
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
@@ -62,18 +75,21 @@ class ChatActivity : AppCompatActivity() {
   private var recipientName: String? = null
   private var groupName: String? = null
   private var participantIds: List<String> = emptyList()
+  private var canManageMembers: Boolean = false
   private var triedAutoResync = false
   private val imageCache = object : LruCache<String, Bitmap>(20) {}
   private val MAX_DOWNLOAD_BYTES = 10L * 1024 * 1024 // 10 MB
 
 
   private val sessionKeyRepository = SessionKeyRepository()
+  private val chatRoomRepository = ChatRoomRepository()
   private var sessionKeyInfo: SessionKeyInfo? = null
   private var messageMapper: MessageMapper? = null
   private val bannerHandler = Handler(Looper.getMainLooper())
   private var bannerHideRunnable: Runnable? = null
 
   private val userNameCache = mutableMapOf<String, String>()
+  private var roomInfoRegistration: ListenerRegistration? = null
 
 
   private val pickImageLauncher = registerForActivityResult(
@@ -113,7 +129,7 @@ class ChatActivity : AppCompatActivity() {
         AppLogger.logError(this, e); ErrorLogger.log(this, e)
         finish(); return
       }
-      initChat(currentUser.uid, null, groupName ?: "Grupo sin nombre", true)
+      initChat(currentUser.uid, null, groupName ?: getString(R.string.chat_group_default_name), true)
     } else {
       recipientUid = intent.getStringExtra("recipientUid")
       recipientName = intent.getStringExtra("recipientName")
@@ -126,7 +142,7 @@ class ChatActivity : AppCompatActivity() {
         if (isFriend) {
           initChat(currentUser.uid, recipientUid!!, recipientName!!, false)
         } else {
-          Toast.makeText(this, R.string.error_not_friends, Toast.LENGTH_SHORT).show()
+          showStatusMessage(R.string.error_not_friends)
           finish()
         }
       }
@@ -142,6 +158,7 @@ class ChatActivity : AppCompatActivity() {
     setSupportActionBar(toolbar)
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = title
+    invalidateOptionsMenu()
 
     messageBanner = findViewById(R.id.messageBanner)
     messageBannerTitle = messageBanner.findViewById(R.id.messageBannerTitle)
@@ -179,13 +196,36 @@ class ChatActivity : AppCompatActivity() {
     NotificationManagerCompat.from(this).cancel(resolvedRoomId.hashCode())
     roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
     messagesRef = roomRef.collection("messages")
-    // reset del flag de auto-resync aqui
-       roomRef.addSnapshotListener { snap, _ ->
-      val map = snap?.get("userNames") as? Map<*, *>
-      if (map != null) {
-        userNameCache.clear()
-        map.forEach { (k, v) ->
-          if (k is String && v is String) userNameCache[k] = v
+    roomInfoRegistration?.remove()
+    roomInfoRegistration = roomRef.addSnapshotListener { snap, _ ->
+      if (snap == null || !snap.exists()) return@addSnapshotListener
+
+      val names = (snap.get("userNames") as? Map<*, *>)
+        ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
+        ?.toMap()
+        ?: emptyMap()
+      userNameCache.clear()
+      userNameCache.putAll(names)
+
+      val ids = (snap.get("participantIds") as? List<*>)
+        ?.mapNotNull { it as? String }
+        ?.filter { it.isNotBlank() }
+        ?.distinct()
+        ?: emptyList()
+      participantIds = ids
+
+      val currentUid = Firebase.auth.currentUser?.uid
+      if (currentUid != null) {
+        val adminIds = (snap.get("adminIds") as? List<*>)
+          ?.mapNotNull { it as? String }
+          ?.filter { it.isNotBlank() }
+          ?.distinct()
+          ?: emptyList()
+        val creatorUid = snap.getString("creatorUid")
+        val canManageNow = adminIds.contains(currentUid) || (!creatorUid.isNullOrBlank() && creatorUid == currentUid) || (adminIds.isEmpty() && creatorUid.isNullOrBlank() && ids.firstOrNull() == currentUid)
+        if (canManageNow != canManageMembers) {
+          canManageMembers = canManageNow
+          invalidateOptionsMenu()
         }
       }
     }
@@ -212,7 +252,7 @@ class ChatActivity : AppCompatActivity() {
       messageMapper = MessageMapper(sessionInfo)
 
       if (sessionInfo?.requiresReauth == true) {
-        Toast.makeText(this@ChatActivity, R.string.chat_session_requires_resync, Toast.LENGTH_LONG).show()
+        showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)
       }
 
       sendButton.isEnabled = true
@@ -239,6 +279,224 @@ class ChatActivity : AppCompatActivity() {
         )
       }
     }
+  }
+
+  override fun onCreateOptionsMenu(menu: Menu): Boolean {
+    if (isGroup) {
+      menuInflater.inflate(R.menu.menu_chat_group, menu)
+      return true
+    }
+    return super.onCreateOptionsMenu(menu)
+  }
+
+  override fun onPrepareOptionsMenu(menu: Menu): Boolean {
+    if (isGroup) {
+      menu.findItem(R.id.action_add_members)?.isVisible = canManageMembers
+    }
+    return super.onPrepareOptionsMenu(menu)
+  }
+
+  override fun onOptionsItemSelected(item: MenuItem): Boolean {
+    return when (item.itemId) {
+      android.R.id.home -> {
+        finish()
+        true
+      }
+      R.id.action_add_members -> {
+        if (canManageMembers) {
+          showAddMembersDialog()
+        }
+        true
+      }
+      R.id.action_leave_group -> {
+        showLeaveGroupConfirmation()
+        true
+      }
+      else -> super.onOptionsItemSelected(item)
+    }
+  }
+
+  private fun showLeaveGroupConfirmation() {
+    val resolvedGroupName = groupName ?: getString(R.string.chat_group_default_name)
+    MaterialAlertDialogBuilder(this)
+      .setTitle(R.string.chat_leave_group_title)
+      .setMessage(getString(R.string.chat_leave_group_message, resolvedGroupName))
+      .setPositiveButton(R.string.chat_leave_group_confirm) { _, _ ->
+        performLeaveGroup()
+      }
+      .setNegativeButton(R.string.cancel, null)
+      .show()
+  }
+
+  private fun performLeaveGroup() {
+    val currentUser = Firebase.auth.currentUser ?: return
+    val activeRoomId = roomId ?: return
+
+    chatRoomRepository.leaveGroup(
+      context = this,
+      roomId = activeRoomId,
+      leaverUid = currentUser.uid,
+      leaverDisplayName = currentUser.displayName ?: currentUser.uid,
+      onSuccess = {
+        runOnUiThread {
+          showStatusMessage(R.string.chat_leave_group_success)
+          finish()
+        }
+      },
+      onFailure = { error ->
+        AppLogger.logError(this, error); ErrorLogger.log(this, error)
+        runOnUiThread {
+          showStatusMessage(R.string.chat_leave_group_error, Toast.LENGTH_LONG)
+        }
+      }
+    )
+  }
+
+  private fun showAddMembersDialog() {
+    val currentUser = Firebase.auth.currentUser ?: return
+    val activeRoomId = roomId ?: return
+
+    val existingParticipants = participantIds.toMutableSet()
+    existingParticipants.add(currentUser.uid)
+
+    UserRepository().getFriends(
+      currentUser.uid,
+      onSuccess = { friends ->
+        val available = friends
+          .filter { it.uid.isNotBlank() && !existingParticipants.contains(it.uid) }
+          .sortedBy { it.displayName.ifBlank { it.uid }.lowercase() }
+
+        runOnUiThread {
+          if (available.isEmpty()) {
+            showStatusMessage(R.string.chat_add_members_empty)
+            return@runOnUiThread
+          }
+
+          val dialogView = layoutInflater.inflate(R.layout.dialog_create_group, null)
+          val recycler = dialogView.findViewById<RecyclerView>(R.id.recyclerFriends)
+          val groupNameLayout = dialogView.findViewById<TextInputLayout>(R.id.groupNameLayout)
+          val groupNameInput = dialogView.findViewById<TextInputEditText>(R.id.editGroupName)
+          val searchInput = dialogView.findViewById<TextInputEditText>(R.id.editSearchFriends)
+
+          groupNameLayout.isVisible = false
+          groupNameInput.isVisible = false
+
+          recycler.layoutManager = LinearLayoutManager(this)
+
+          val selected = mutableSetOf<String>()
+
+          val adapter = object : RecyclerView.Adapter<FriendViewHolder>() {
+            private var filtered = available
+            var onSelectionChanged: ((Boolean) -> Unit)? = null
+
+            override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FriendViewHolder {
+              val view = layoutInflater.inflate(R.layout.item_friend_checkbox, parent, false)
+              return FriendViewHolder(view)
+            }
+
+            override fun getItemCount(): Int = filtered.size
+
+            override fun onBindViewHolder(holder: FriendViewHolder, position: Int) {
+              val friend = filtered[position]
+              holder.checkBox.text = friend.displayName.ifBlank { friend.uid }
+              holder.checkBox.setOnCheckedChangeListener(null)
+              holder.checkBox.isChecked = selected.contains(friend.uid)
+              holder.checkBox.setOnCheckedChangeListener { _, isChecked ->
+                if (isChecked) selected.add(friend.uid) else selected.remove(friend.uid)
+                onSelectionChanged?.invoke(selected.isNotEmpty())
+              }
+            }
+
+            fun filter(query: String) {
+              val lower = query.lowercase()
+              filtered = if (lower.isBlank()) {
+                available
+              } else {
+                available.filter {
+                  it.displayName.contains(query, ignoreCase = true) || it.uid.contains(query, ignoreCase = true)
+                }
+              }
+              notifyDataSetChanged()
+            }
+
+            fun getSelectedUsers(): List<User> = available.filter { selected.contains(it.uid) }
+          }
+
+          recycler.adapter = adapter
+
+          val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle(R.string.chat_add_members_title)
+            .setView(dialogView)
+            .setPositiveButton(R.string.chat_add_members_confirm, null)
+            .setNegativeButton(R.string.cancel, null)
+            .create()
+
+          dialog.setOnShowListener {
+            val addButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE)
+            addButton.isEnabled = false
+
+            adapter.onSelectionChanged = { hasSelection ->
+              addButton.isEnabled = hasSelection
+            }
+
+            addButton.setOnClickListener {
+              val selectedUsers = adapter.getSelectedUsers()
+              if (selectedUsers.isEmpty()) {
+                showStatusMessage(R.string.error_group_members_required)
+                return@setOnClickListener
+              }
+
+              addButton.isEnabled = false
+
+              chatRoomRepository.addMembers(
+                context = this,
+                roomId = activeRoomId,
+                initiatorUid = currentUser.uid,
+                initiatorDisplayName = currentUser.displayName ?: currentUser.uid,
+                newMembers = selectedUsers,
+                onSuccess = {
+                  runOnUiThread {
+                    showStatusMessage(R.string.chat_add_members_success)
+                    dialog.dismiss()
+                  }
+                },
+                onFailure = { error ->
+                  AppLogger.logError(this, error)
+                  ErrorLogger.log(this, error)
+                  runOnUiThread {
+                    showStatusMessage(R.string.chat_add_members_error, Toast.LENGTH_LONG)
+                    addButton.isEnabled = true
+                  }
+                },
+              )
+            }
+          }
+
+          searchInput.addTextChangedListener { text ->
+            adapter.filter(text?.toString().orEmpty())
+          }
+
+          dialog.show()
+        }
+      },
+      onFailure = { error ->
+        AppLogger.logError(this, error)
+        ErrorLogger.log(this, error)
+        runOnUiThread {
+          showStatusMessage(R.string.chat_add_members_error, Toast.LENGTH_LONG)
+        }
+      },
+    )
+  }
+
+  private fun showStatusMessage(@StringRes messageResId: Int, duration: Int = Toast.LENGTH_SHORT) {
+    if (isFinishing || isDestroyed) return
+    Toast.makeText(applicationContext, messageResId, duration).show()
+  }
+
+  private fun showStatusMessage(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
+    if (isFinishing || isDestroyed) return
+    Toast.makeText(applicationContext, message, duration).show()
   }
 
 
@@ -324,11 +582,7 @@ class ChatActivity : AppCompatActivity() {
                                 recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
                             }
                         } else {
-                            Toast.makeText(
-                                this@ChatActivity,
-                                R.string.chat_session_requires_resync,
-                                Toast.LENGTH_LONG
-                            ).show()
+                            showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)
                         }
                     }
                 }
@@ -374,7 +628,7 @@ class ChatActivity : AppCompatActivity() {
   ) {
     val sessionInfo = sessionKeyInfo
     if (sessionInfo?.rootKey == null) {
-      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      showStatusMessage(R.string.chat_session_missing_keys, Toast.LENGTH_LONG)
       return
     }
 
@@ -390,7 +644,7 @@ class ChatActivity : AppCompatActivity() {
       withContext(Dispatchers.Default) { MessageCrypto.encrypt(sessionInfo, body, metadata) }
     } catch (e: Exception) {
       AppLogger.logError(this, e); ErrorLogger.log(this, e)
-      Toast.makeText(this, R.string.chat_message_encrypt_error, Toast.LENGTH_SHORT).show()
+      showStatusMessage(R.string.chat_message_encrypt_error)
       return
     }
 
@@ -432,7 +686,7 @@ class ChatActivity : AppCompatActivity() {
       }
     } catch (e: Exception) {
       AppLogger.logError(this, e); ErrorLogger.log(this, e)
-      Toast.makeText(this, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+      showStatusMessage(R.string.chat_message_send_error)
       return
     }
 
@@ -460,6 +714,8 @@ class ChatActivity : AppCompatActivity() {
 
   override fun onDestroy() {
     if (::listenerRegistration.isInitialized) listenerRegistration.remove()
+    roomInfoRegistration?.remove()
+    roomInfoRegistration = null
     bannerHideRunnable?.let { bannerHandler.removeCallbacks(it) }
     bannerHideRunnable = null
     super.onDestroy()
@@ -477,7 +733,7 @@ class ChatActivity : AppCompatActivity() {
   ) {
     val sessionInfo = sessionKeyInfo
     if (sessionInfo?.rootKey == null) {
-      Toast.makeText(this, R.string.chat_session_missing_keys, Toast.LENGTH_LONG).show()
+      showStatusMessage(R.string.chat_session_missing_keys, Toast.LENGTH_LONG)
       return
     }
 
@@ -496,10 +752,10 @@ class ChatActivity : AppCompatActivity() {
         }
       } catch (e: Exception) {
         AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       } ?: run {
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       }
 
@@ -510,7 +766,7 @@ class ChatActivity : AppCompatActivity() {
         }
       } catch (e: Exception) {
         AppLogger.logError(this@ChatActivity, e); ErrorLogger.log(this@ChatActivity, e)
-        Toast.makeText(this@ChatActivity, R.string.chat_message_send_error, Toast.LENGTH_SHORT).show()
+        showStatusMessage(R.string.chat_message_send_error)
         return@launch
       } finally { encryptedAttachment.clearCiphertext() }
 
@@ -691,6 +947,10 @@ class ChatActivity : AppCompatActivity() {
     val metadata: MessageCrypto.EncryptionMetadata,
     val result: MessageCrypto.EncryptionResult,
   )
+
+  private class FriendViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+    val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
+  }
 
   companion object {
     private const val MESSAGE_TYPE_TEXT = "text/plain"

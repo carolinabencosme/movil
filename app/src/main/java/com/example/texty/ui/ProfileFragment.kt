@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import com.bumptech.glide.Glide
@@ -24,9 +25,14 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
-class ProfileFragment : Fragment() {
+class ProfileFragment : Fragment(), PendingChangesHandler {
     private var imageUri: Uri? = null
     private var currentProfile: User? = null
+
+    private var imageProfileView: ImageView? = null
+    private var nameInput: TextInputEditText? = null
+    private var aboutInput: TextInputEditText? = null
+    private var phoneInput: TextInputEditText? = null
 
     private fun showToast(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
         val appContext = context?.applicationContext ?: return
@@ -36,11 +42,12 @@ class ProfileFragment : Fragment() {
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         if (uri != null) {
             imageUri = uri
-            view?.findViewById<ImageView>(R.id.imageProfile)?.let { imageView ->
+            imageProfileView?.let { imageView ->
                 Glide.with(this).load(uri).into(imageView)
             }
         }
     }
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -54,19 +61,24 @@ class ProfileFragment : Fragment() {
 
         val user = FirebaseAuth.getInstance().currentUser
 
-        val imageProfile = view.findViewById<ImageView>(R.id.imageProfile)
-        val nameInput = view.findViewById<TextInputEditText>(R.id.editDisplayName)
+        imageProfileView = view.findViewById(R.id.imageProfile)
+        nameInput = view.findViewById(R.id.editDisplayName)
         val emailText = view.findViewById<TextView>(R.id.textUserEmail)
-        val aboutInput = view.findViewById<TextInputEditText>(R.id.editAbout)
-        val phoneInput = view.findViewById<TextInputEditText>(R.id.editPhone)
+        aboutInput = view.findViewById(R.id.editAbout)
+        phoneInput = view.findViewById(R.id.editPhone)
         val buttonSave = view.findViewById<Button>(R.id.buttonSave)
         val buttonChangePassword = view.findViewById<Button>(R.id.buttonChangePassword)
         val buttonLogout = view.findViewById<Button>(R.id.buttonLogout)
         val buttonEdit = view.findViewById<MaterialButton>(R.id.buttonEdit)
 
-        nameInput.setText(user?.displayName ?: "")
+        nameInput?.setText(user?.displayName ?: "")
         emailText.text = "Correo: ${user?.email ?: ""}"
-        Glide.with(this).load(user?.photoUrl).placeholder(R.drawable.ic_person).into(imageProfile)
+        imageProfileView?.let { imageView ->
+            Glide.with(this)
+                .load(user?.photoUrl)
+                .placeholder(R.drawable.ic_person)
+                .into(imageView)
+        }
 
         val uid = user?.uid
         if (uid != null) {
@@ -74,23 +86,47 @@ class ProfileFragment : Fragment() {
                 .addOnSuccessListener { doc ->
                     val profile = doc.toObject(User::class.java)
                     currentProfile = profile
-                    aboutInput.setText(profile?.about ?: "")
-                    phoneInput.setText(profile?.phone ?: "")
+                    if (!profile?.displayName.isNullOrBlank()) {
+                        nameInput?.setText(profile?.displayName)
+                    }
+                    aboutInput?.setText(profile?.about ?: "")
+                    phoneInput?.setText(profile?.phone ?: "")
+                    val photoUrl = profile?.photoUrl
+                    if (!photoUrl.isNullOrBlank()) {
+                        imageProfileView?.let { imageView ->
+                            Glide.with(this)
+                                .load(photoUrl)
+                                .placeholder(R.drawable.ic_person)
+                                .into(imageView)
+                        }
+                    }
                 }
         }
 
-        imageProfile.setOnClickListener { pickImage.launch("image/*") }
+        imageProfileView?.setOnClickListener { pickImage.launch("image/*") }
         buttonEdit.setOnClickListener { pickImage.launch("image/*") }
+
+        requireActivity().onBackPressedDispatcher.addCallback(
+            viewLifecycleOwner,
+            object : OnBackPressedCallback(true) {
+                override fun handleOnBackPressed() {
+                    onAttemptExit {
+                        isEnabled = false
+                        requireActivity().onBackPressedDispatcher.onBackPressed()
+                    }
+                }
+            }
+        )
 
         buttonSave.setOnClickListener {
             val currentUser = user ?: return@setOnClickListener
-            val uid = currentUser.uid
+            val uidUser = currentUser.uid
             buttonSave.isEnabled = false
 
-            val name = nameInput.text.toString().trim()
-            val about = aboutInput.text.toString().trim()
-            val phone = phoneInput.text.toString().trim()
-            val storageRef = Firebase.storage.reference.child("profileImages/$uid.jpg")
+            val name = nameInput?.text?.toString()?.trim().orEmpty()
+            val about = aboutInput?.text?.toString()?.trim().orEmpty()
+            val phone = phoneInput?.text?.toString()?.trim().orEmpty()
+            val storageRef = Firebase.storage.reference.child("profileImages/$uidUser.jpg")
 
             val previousProfile = currentProfile
             val previousDisplayName = previousProfile?.displayName ?: currentUser.displayName
@@ -104,13 +140,15 @@ class ProfileFragment : Fragment() {
             }
 
             fun restorePreviousUI() {
-                nameInput.setText(previousDisplayName ?: "")
-                aboutInput.setText(previousAbout ?: "")
-                phoneInput.setText(previousPhone ?: "")
-                Glide.with(this)
-                    .load(previousPhotoUri)
-                    .placeholder(R.drawable.ic_person)
-                    .into(imageProfile)
+                nameInput?.setText(previousDisplayName ?: "")
+                aboutInput?.setText(previousAbout ?: "")
+                phoneInput?.setText(previousPhone ?: "")
+                imageProfileView?.let { imageView ->
+                    Glide.with(this)
+                        .load(previousPhotoUri)
+                        .placeholder(R.drawable.ic_person)
+                        .into(imageView)
+                }
                 imageUri = null
             }
 
@@ -127,16 +165,16 @@ class ProfileFragment : Fragment() {
                 }
                 currentUser.updateProfile(profileUpdates)
                     .addOnSuccessListener {
-                        val baseProfile = previousProfile ?: User(uid = uid)
+                        val baseProfile = previousProfile ?: User(uid = uidUser)
                         val profile = baseProfile.copy(
-                            uid = uid,
+                            uid = uidUser,
                             displayName = name,
                             photoUrl = photoUri?.toString() ?: baseProfile.photoUrl,
                             isOnline = true,
                             about = about,
                             phone = phone,
                         )
-                        Firebase.firestore.collection("users").document(uid).set(profile)
+                        Firebase.firestore.collection("users").document(uidUser).set(profile)
                             .addOnSuccessListener {
                                 currentProfile = profile
                                 imageUri = null
@@ -197,5 +235,52 @@ class ProfileFragment : Fragment() {
                 }
                 .show()
         }
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        imageProfileView = null
+        nameInput = null
+        aboutInput = null
+        phoneInput = null
+    }
+
+    override fun hasPendingChanges(): Boolean {
+        val name = nameInput?.text?.toString()?.trim().orEmpty()
+        val about = aboutInput?.text?.toString()?.trim().orEmpty()
+        val phone = phoneInput?.text?.toString()?.trim().orEmpty()
+
+        val user = FirebaseAuth.getInstance().currentUser
+        val savedName = currentProfile?.displayName?.takeIf { it.isNotBlank() } ?: user?.displayName.orEmpty()
+        val savedAbout = currentProfile?.about ?: ""
+        val savedPhone = currentProfile?.phone ?: ""
+        val savedPhoto = currentProfile?.photoUrl ?: user?.photoUrl?.toString()
+
+        val nameChanged = name != savedName
+        val aboutChanged = about != savedAbout
+        val phoneChanged = phone != savedPhone
+        val photoChanged = imageUri?.toString()?.let { it != savedPhoto } ?: false
+
+        return nameChanged || aboutChanged || phoneChanged || photoChanged
+    }
+
+    override fun onAttemptExit(onContinue: () -> Unit) {
+        if (hasPendingChanges()) {
+            showPendingChangesDialog(onContinue)
+        } else {
+            onContinue()
+        }
+    }
+
+    private fun showPendingChangesDialog(onContinue: () -> Unit) {
+        if (context == null) return
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.unsaved_changes_title)
+            .setMessage(R.string.unsaved_changes_message)
+            .setNegativeButton(R.string.keep_editing, null)
+            .setPositiveButton(R.string.discard_changes) { _, _ ->
+                onContinue()
+            }
+            .show()
     }
 }

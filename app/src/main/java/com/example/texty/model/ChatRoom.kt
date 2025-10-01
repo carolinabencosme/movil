@@ -13,4 +13,5 @@ data class ChatRoom(
     val unreadCounts: Map<String, Int> = emptyMap(),
     val summaryError: Boolean = false,
     val summaryRequiresResync: Boolean = false,
+    val photoUrl: String? = null
 )

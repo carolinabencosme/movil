@@ -41,6 +41,10 @@ class ChatListViewModel : ViewModel() {
     private val sessionCache = mutableMapOf<String, SessionKeyInfo>()
     private val purgedRooms = mutableSetOf<String>()
 
+    private val userPhotoCache = mutableMapOf<String, String?>()
+    private val userPhotoListeners = mutableMapOf<String, ListenerRegistration>()
+
+
     private var currentUserUid: String? = null
 
     fun startListening(currentUserUid: String) {
@@ -61,29 +65,41 @@ class ChatListViewModel : ViewModel() {
                 val seenRoomIds = mutableSetOf<String>()
 
                 documents.forEach { doc ->
+
+                    // --- Campos base del room ---
                     val participantIds = (doc.get("participantIds") as? List<*>)
                         ?.mapNotNull { it as? String }
                         ?.distinct()
                         ?: emptyList()
+
                     val userNames = (doc.get("userNames") as? Map<*, *>)
-                        ?.mapNotNull { (key, value) ->
-                            if (key is String && value is String) key to value else null
-                        }
+                        ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
                         ?.toMap()
                         ?: emptyMap()
+
                     val isGroup = doc.getBoolean("isGroup") ?: false
                     val groupName = doc.getString("groupName")
                     val updatedAt = doc.getTimestamp("updatedAt") ?: Timestamp.now()
+
                     val unreadCountsLong = (doc.get("unreadCounts") as? Map<*, *>) ?: emptyMap<Any?, Any?>()
-                    val unreadCounts = unreadCountsLong.mapNotNull { (key, value) ->
-                        val uid = key as? String ?: return@mapNotNull null
-                        val count = when (value) {
-                            is Number -> value.toInt()
-                            else -> null
-                        }
-                        count?.let { uid to it }
+                    val unreadCounts = unreadCountsLong.mapNotNull { (k, v) ->
+                        val uid = k as? String ?: return@mapNotNull null
+                        val count = (v as? Number)?.toInt() ?: return@mapNotNull null
+                        uid to count
                     }.toMap()
 
+                    // --- Foto (avatar): otro usuario en 1:1 o foto de grupo si existe ---
+                    val currentUid = currentUserUid
+                    val otherUid = if (!isGroup) participantIds.firstOrNull { it != currentUid } else null
+                    val groupPhoto = doc.getString("groupPhotoUrl") // opcional, si lo guardas en el room
+
+                    val photoUrl = when {
+                        isGroup -> groupPhoto
+                        otherUid != null -> userPhotoCache[otherUid] // se actualizará por listener
+                        else -> null
+                    }
+
+                    // --- Construcción del ChatRoom (una sola vez) ---
                     val room = ChatRoom(
                         id = doc.id,
                         participantIds = participantIds,
@@ -95,17 +111,25 @@ class ChatListViewModel : ViewModel() {
                         unreadCounts = unreadCounts,
                         summaryError = false,
                         summaryRequiresResync = false,
+                        photoUrl = photoUrl, // NUEVO
                     )
 
                     baseRooms[doc.id] = room
                     seenRoomIds.add(doc.id)
 
+                    // Limpieza de campo legacy si aún existe
                     if (!purgedRooms.contains(doc.id) && doc.data?.containsKey("lastMessage") == true) {
                         purgedRooms.add(doc.id)
                         purgeLegacyLastMessage(doc.reference)
                     }
 
+                    // Listener existente para summaries por usuario
                     ensureUserStateListener(doc.id)
+
+                    // NUEVO: escucha la foto del "otro" usuario (solo 1:1)
+                    if (!isGroup && otherUid != null) {
+                        ensureUserPhotoListener(otherUid, doc.id)
+                    }
                 }
 
                 val removed = baseRooms.keys - seenRoomIds
@@ -120,12 +144,45 @@ class ChatListViewModel : ViewModel() {
             }
     }
 
+    private fun ensureUserPhotoListener(userUid: String, roomId: String) {
+        if (userPhotoListeners.containsKey(userUid)) return
+
+        val l = Firebase.firestore.collection("users")
+            .document(userUid)
+            .addSnapshotListener { snap, _ ->
+                val newUrl = snap?.getString("photoUrl") // ajusta el nombre del campo si usas otro
+                val oldUrl = userPhotoCache[userUid]
+                if (oldUrl == newUrl) return@addSnapshotListener
+
+                userPhotoCache[userUid] = newUrl
+
+                // Actualiza todas las rooms 1:1 donde participa este user
+                val updated = baseRooms.mapValues { (rid, room) ->
+                    if (!room.isGroup && room.participantIds.any { it == userUid }) {
+                        room.copy(photoUrl = newUrl)
+                    } else room
+                }
+                baseRooms.clear()
+                baseRooms.putAll(updated)
+                publishRooms()
+            }
+
+        userPhotoListeners[userUid] = l
+    }
+
+
     override fun onCleared() {
         roomsListener?.remove()
         userStateListeners.values.forEach { it.remove() }
         userStateListeners.clear()
+
+        // NUEVO: limpia listeners de fotos
+        userPhotoListeners.values.forEach { it.remove() }
+        userPhotoListeners.clear()
+
         super.onCleared()
     }
+
 
     private fun ensureUserStateListener(roomId: String) {
         val ownerUid = currentUserUid ?: return

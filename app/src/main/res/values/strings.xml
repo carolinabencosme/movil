@@ -38,14 +38,14 @@
     <string name="privacy">Privacidad</string>
     <string name="private_account">Cuenta privada</string>
     <string name="error_not_friends">Debes ser amigo para chatear</string>
-    <string name="chat_message_unavailable">Mensaje no disponible</string>
+    <string name="chat_message_unavailable">Nuevo Chat. No hay mensajes.</string>
     <string name="chat_message_unavailable_resync">Mensaje no disponible. Sincroniza tus claves.</string>
     <string name="chat_message_empty_placeholder">Mensaje vacío</string>
     <string name="chat_session_requires_resync">No se pudo validar la sesión cifrada. Sincroniza tus claves.</string>
     <string name="chat_session_missing_keys">No se encontró la clave de sesión. Re-sincroniza antes de enviar.</string>
     <string name="chat_message_encrypt_error">No se pudo cifrar el mensaje.</string>
     <string name="chat_message_send_error">No se pudo enviar el mensaje.</string>
-    <string name="chat_message_image_preview">📷 Imagen cifrada</string>
+    <string name="chat_message_image_preview">📷 Imagen</string>
     <string name="chat_banner_icon_content_description">Mensaje enviado</string>
     <string name="chat_banner_message_sent">Mensaje enviado</string>
     <string name="chat_banner_preview_with_time">%1$s · %2$s</string>

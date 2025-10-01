@@ -39,6 +39,9 @@
     <string name="enable_notifications">Recibir notificaciones</string>
     <string name="privacy">Privacidad</string>
     <string name="private_account">Cuenta privada</string>
+    <string name="logout_confirmation_title">¿Cerrar sesión?</string>
+    <string name="logout_confirmation_message">Tu sesión se mantendrá activa si cancelas.</string>
+    <string name="cancel">Cancelar</string>
     <string name="error_not_friends">Debes ser amigo para chatear</string>
     <string name="chat_message_unavailable">Nuevo Chat.</string>
     <string name="chat_message_unavailable_resync">Mensaje no disponible. Sincroniza tus claves.</string>

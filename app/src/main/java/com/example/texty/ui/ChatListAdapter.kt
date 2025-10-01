@@ -50,7 +50,7 @@ class ChatListAdapter(
         }
 
         // **Avatar** (photoUrl viene del ViewModel)
-        val placeholder = if (room.isGroup) R.drawable.baseline_adb_24 else R.drawable.baseline_account_circle_24
+        val placeholder = if (room.isGroup) R.drawable.baseline_account_circle_24 else R.drawable.baseline_account_circle_24
         Glide.with(holder.itemView)
             .load(room.photoUrl)
             .placeholder(placeholder)

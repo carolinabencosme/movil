@@ -68,6 +68,7 @@ dependencies {
 
     // Glide (carga de imágenes)
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("androidx.activity:activity:1.9.2")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
     // Cryptography
@@ -92,4 +93,7 @@ dependencies {
     implementation("androidx.compose.material3:material3:1.3.2")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-alpha04")
+
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
 }

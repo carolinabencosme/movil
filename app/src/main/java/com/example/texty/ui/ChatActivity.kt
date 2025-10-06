@@ -156,6 +156,7 @@ class ChatActivity : AppCompatActivity() {
     sendImageButton.contentDescription = getString(R.string.chat_add_image)
     val toolbar = findViewById<MaterialToolbar>(R.id.topAppBar)
     setSupportActionBar(toolbar)
+    //flecha para volver atras
     supportActionBar?.setDisplayHomeAsUpEnabled(true)
     supportActionBar?.title = title
     invalidateOptionsMenu()
@@ -169,11 +170,6 @@ class ChatActivity : AppCompatActivity() {
     messageInput = findViewById(R.id.editMessage)
     sendButton = findViewById(R.id.buttonSend)
     sendButton.setText(R.string.chat_action_send)
-
-    //adapter = ChatAdapter(currentUid)
-   /* adapter = ChatAdapter(currentUid) { msg, iv, tv ->
-      bindAttachment(msg, iv, tv)
-    }*/
 
     adapter = ChatAdapter(
       myUid = currentUid,
@@ -192,7 +188,9 @@ class ChatActivity : AppCompatActivity() {
     }
     // ---- set refs UNA sola vez ----
     roomId = resolvedRoomId
+    //limpia los contadores de notificaciones no leídas.
     NotificationCounter.getInstance(applicationContext).clear(resolvedRoomId)
+    //borra la notificación visual que aparece en la barra del teléfono
     NotificationManagerCompat.from(this).cancel(resolvedRoomId.hashCode())
     roomRef = Firebase.firestore.collection("rooms").document(resolvedRoomId)
     messagesRef = roomRef.collection("messages")
@@ -200,6 +198,7 @@ class ChatActivity : AppCompatActivity() {
     roomInfoRegistration = roomRef.addSnapshotListener { snap, _ ->
       if (snap == null || !snap.exists()) return@addSnapshotListener
 
+      //Actualiza los nombres de los participantes en memoria, para que el adaptador los pueda mostrar sin volver a leer de Firebase
       val names = (snap.get("userNames") as? Map<*, *>)
         ?.mapNotNull { (k, v) -> if (k is String && v is String) k to v else null }
         ?.toMap()
@@ -240,17 +239,28 @@ class ChatActivity : AppCompatActivity() {
 
     lifecycleScope.launch {
       participantIds = resolveParticipantIds(isGroupChat, currentUid, peerUid)
+      //Limpia un campo obsoleto llamado lastMessage en Firestore (por compatibilidad con versiones antiguas).
       purgeLegacyLastMessageField()
 
       // Asegura sesión válida
+      /*Aquí se garantiza que las claves de cifrado (session keys) necesarias para enviar mensajes existan y sean válidas.
+
+        Si es un grupo → carga las claves de la sala (loadSessionInfo)
+
+        Si es un chat directo → verifica o crea una sesión de cifrado entre los dos usuarios (ensureSessionForDirectChat)
+
+        Piensa en esto como:
+        “Antes de hablar, asegúrate de que la conversación esté cifrada y las llaves estén sincronizadas.”*/
       val sessionInfo = if (isGroupChat) {
         loadSessionInfo(resolvedRoomId, currentUid, true, null)
       } else {
         ensureSessionForDirectChat(currentUid, peerUid!!)
       }
       sessionKeyInfo = sessionInfo
+      //descifrar los mensajes cuando lleguen desde Firestore.
       messageMapper = MessageMapper(sessionInfo)
 
+      //Verifica si la sesión actual necesita ser resincronizada (por ejemplo, las claves caducaron o no coinciden).
       if (sessionInfo?.requiresReauth == true) {
         showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)
       }
@@ -261,6 +271,7 @@ class ChatActivity : AppCompatActivity() {
       try { roomRef.update("unreadCounts.$currentUid", 0).await() } catch (_: Exception) {}
 
       // Arranca el listener después de tener sessionKeyInfo y messageMapper
+      //escuchar los mensajes del chat en tiempo real (desde Firestore).
       startMessageListener(currentUid, resolvedRoomId)
     }
 
@@ -298,6 +309,7 @@ class ChatActivity : AppCompatActivity() {
 
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     return when (item.itemId) {
+      //botón de retroceso
       android.R.id.home -> {
         finish()
         true
@@ -351,7 +363,19 @@ class ChatActivity : AppCompatActivity() {
       }
     )
   }
-
+/*
+| Paso | Qué hace                                                             |
+| ---- | -------------------------------------------------------------------- |
+| 1    | Verifica que haya usuario y grupo activo                             |
+| 2    | Crea lista de participantes existentes                               |
+| 3    | Obtiene los amigos desde Firebase                                    |
+| 4    | Filtra los que no están en el grupo                                  |
+| 5    | Crea un cuadro de diálogo personalizado con RecyclerView             |
+| 6    | Permite buscar y seleccionar amigos                                  |
+| 7    | Cuando el usuario confirma, agrega esos amigos al grupo en Firestore |
+| 8    | Si todo sale bien, muestra mensaje y cierra el cuadro                |
+| 9    | Si hay error, muestra mensaje de fallo                               |
+ */
   private fun showAddMembersDialog() {
     val currentUser = Firebase.auth.currentUser ?: return
     val activeRoomId = roomId ?: return
@@ -830,8 +854,65 @@ class ChatActivity : AppCompatActivity() {
     bannerHideRunnable = hideRunnable
     bannerHandler.postDelayed(hideRunnable, 3000)
   }
-
   private fun bindAttachment(
+    message: com.example.texty.model.Message,
+    imageView: ImageView,
+    messageText: TextView
+  ) {
+    val body = message.decrypted?.body ?: return
+    val mime = body.attachmentMimeType ?: return
+    if (!mime.startsWith("image")) return
+
+    val storagePath = body.attachmentStoragePath ?: return
+
+    // Si ya está en caché:
+    imageCache.get(storagePath)?.let { bmp ->
+      imageView.setImageBitmap(bmp)
+      imageView.visibility = View.VISIBLE
+      messageText.visibility = View.GONE
+
+      // NUEVO: abrir a pantalla completa
+      imageView.setOnClickListener {
+        ImagePreviewCache.put(storagePath, bmp)
+        val i = Intent(this@ChatActivity, ImagePreviewActivity::class.java)
+        i.putExtra(ImagePreviewActivity.EXTRA_KEY, storagePath)
+        startActivity(i)
+      }
+      return
+    }
+
+    // Descarga + descifrado
+    lifecycleScope.launch {
+      try {
+        val session = sessionKeyInfo ?: return@launch
+        val metadata = AttachmentCrypto.extractMetadata(body) ?: return@launch
+        val plainBytes = withContext(Dispatchers.IO) {
+          AttachmentCrypto.downloadAndDecryptAttachment(metadata, session)
+        }
+        val bmp = withContext(Dispatchers.Default) {
+          BitmapFactory.decodeByteArray(plainBytes, 0, plainBytes.size)
+        } ?: return@launch
+
+        imageCache.put(storagePath, bmp)
+        imageView.setImageBitmap(bmp)
+        imageView.visibility = View.VISIBLE
+        messageText.visibility = View.GONE
+
+        // NUEVO: abrir a pantalla completa
+        imageView.setOnClickListener {
+          ImagePreviewCache.put(storagePath, bmp)
+          val i = Intent(this@ChatActivity, ImagePreviewActivity::class.java)
+          i.putExtra(ImagePreviewActivity.EXTRA_KEY, storagePath)
+          startActivity(i)
+        }
+      } catch (e: Exception) {
+        AppLogger.logError(this@ChatActivity, e)
+        // deja el texto si falla
+      }
+    }
+  }
+
+  /*private fun bindAttachment(
     message: com.example.texty.model.Message,
     imageView: ImageView,
     messageText: TextView
@@ -873,7 +954,7 @@ class ChatActivity : AppCompatActivity() {
       }
     }
   }
-
+*/
   private suspend fun resolveParticipantIds(
     isGroupChat: Boolean,
     currentUid: String,

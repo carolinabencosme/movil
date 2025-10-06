@@ -43,7 +43,8 @@
     <string name="logout_confirmation_message">Tu sesión se mantendrá activa si cancelas.</string>
     <string name="cancel">Cancelar</string>
     <string name="unsaved_changes_title">¿Descartar cambios?</string>
-    <string name="unsaved_changes_message">Tienes cambios sin guardar en tu perfil. Si sales ahora, se perderán.</string>
+    <string name="unsaved_changes_message">Tienes cambios sin guardar en tu perfil. Si sales ahora, se perderán.
+    </string>
     <string name="keep_editing">Seguir editando</string>
     <string name="discard_changes">Salir sin guardar</string>
     <string name="error_not_friends">Debes ser amigo para chatear</string>
@@ -77,7 +78,9 @@
     <string name="notification_generic_title">Nuevo mensaje</string>
     <string name="notification_generic_body">Tienes un mensaje nuevo</string>
     <string name="permissions_title">Permisos necesarios</string>
-    <string name="permissions_message">Para enviarte notificaciones y permitir fotos/adjuntos, necesitamos permisos de Notificaciones, Cámara y Acceso a Imágenes.</string>
+    <string name="permissions_message">Para enviarte notificaciones y permitir fotos/adjuntos, necesitamos permisos de
+        Notificaciones, Cámara y Acceso a Imágenes.
+    </string>
     <string name="permissions_allow">Conceder</string>
     <string name="permissions_not_now">Ahora no</string>
     <plurals name="notification_new_messages">

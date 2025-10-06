@@ -912,49 +912,6 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
-  /*private fun bindAttachment(
-    message: com.example.texty.model.Message,
-    imageView: ImageView,
-    messageText: TextView
-  ) {
-    val body = message.decrypted?.body ?: return
-    val mime = body.attachmentMimeType ?: return
-    if (!mime.startsWith("image")) return
-
-    val storagePath = body.attachmentStoragePath ?: return
-
-    imageCache.get(storagePath)?.let { bmp ->
-      imageView.setImageBitmap(bmp)
-      imageView.visibility = View.VISIBLE
-      messageText.visibility = View.GONE
-      return
-    }
-
-    lifecycleScope.launch {
-      try {
-        val session = sessionKeyInfo ?: return@launch
-
-        // 🔹 Construir metadatos y descifrar usando la API correcta
-        val metadata = AttachmentCrypto.extractMetadata(body) ?: return@launch
-        val plainBytes = withContext(Dispatchers.IO) {
-          AttachmentCrypto.downloadAndDecryptAttachment(metadata, session)
-        }
-
-        val bmp = withContext(Dispatchers.Default) {
-          BitmapFactory.decodeByteArray(plainBytes, 0, plainBytes.size)
-        } ?: return@launch
-
-        imageCache.put(storagePath, bmp)
-        imageView.setImageBitmap(bmp)
-        imageView.visibility = View.VISIBLE
-        messageText.visibility = View.GONE
-      } catch (e: Exception) {
-        AppLogger.logError(this@ChatActivity, e)
-        // Si falla, dejamos el placeholder de texto
-      }
-    }
-  }
-*/
   private suspend fun resolveParticipantIds(
     isGroupChat: Boolean,
     currentUid: String,

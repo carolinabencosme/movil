@@ -23,7 +23,9 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-// Gestiona salas, claves grupales y membresías.
+/**
+ * Administra salas de chat, miembros y distribución de claves grupales en Firestore.
+ */
 class ChatRoomRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
@@ -31,6 +33,9 @@ class ChatRoomRepository(
     private val usersCollection = firestore.collection("users")
     private val random = SecureRandom()
 
+    /**
+     * Crea un chat grupal nuevo y publica la primera versión de la clave compartida.
+     */
     fun createGroup(
         context: Context,
         creatorUid: String,
@@ -105,6 +110,9 @@ class ChatRoomRepository(
             .addOnFailureListener(onFailure)
     }
 
+    /**
+     * Gira la clave grupal generando material nuevo y entregándolo a los miembros.
+     */
     fun rotateGroupKey(
         context: Context,
         roomId: String,
@@ -197,6 +205,9 @@ class ChatRoomRepository(
             .addOnFailureListener(onFailure)
     }
 
+    /**
+     * Incorpora nuevos usuarios al grupo y replica la clave actual para ellos.
+     */
     fun addMembers(
         context: Context,
         roomId: String,
@@ -360,6 +371,9 @@ class ChatRoomRepository(
         }.addOnFailureListener(onFailure)
     }
 
+    /**
+     * Permite que un miembro abandone el grupo y rota la clave para los restantes.
+     */
     fun leaveGroup(
         context: Context,
         roomId: String,
@@ -441,10 +455,16 @@ class ChatRoomRepository(
         }.addOnFailureListener(onFailure)
     }
 
+    /**
+     * Produce material aleatorio para usarse como clave simétrica del grupo.
+     */
     private fun generateGroupSenderKey(): ByteArray = ByteArray(GROUP_KEY_SIZE).apply {
         random.nextBytes(this)
     }
 
+    /**
+     * Prepara los payloads cifrados de la clave grupal para cada participante.
+     */
     private fun buildEncryptedGroupKeyWriteSet(
         creatorUid: String,
         creatorDisplayName: String,
@@ -496,6 +516,9 @@ class ChatRoomRepository(
         )
     }
 
+    /**
+     * Cifra la clave grupal para un participante específico y devuelve el payload Firestore.
+     */
     private fun encryptGroupKeyForParticipant(
         creatorDisplayName: String,
         creatorBundle: KeyBundle,
@@ -569,6 +592,9 @@ class ChatRoomRepository(
         )
     }
 
+    /**
+     * Deriva una clave simétrica a partir del secreto compartido y metadatos de claves.
+     */
     private fun deriveSymmetricKey(
         sharedSecret: ByteArray,
         senderIdentityKey: String,
@@ -588,6 +614,9 @@ class ChatRoomRepository(
         }
     }
 
+    /**
+     * Calcula una huella estable del secreto compartido para detectar inconsistencias.
+     */
     private fun fingerprintSharedSecret(
         sharedSecret: ByteArray,
         recipientPublicKey: ByteArray,
@@ -605,6 +634,9 @@ class ChatRoomRepository(
         }
     }
 
+    /**
+     * Genera una huella base64 de la clave grupal actual.
+     */
     private fun fingerprintGroupKey(groupKey: ByteArray): String {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -618,6 +650,9 @@ class ChatRoomRepository(
         }
     }
 
+    /**
+     * Decodifica cadenas base64 ignorando errores de formato.
+     */
     private fun decodeBase64(value: String?): ByteArray? =
         value?.let {
             try {
@@ -627,22 +662,34 @@ class ChatRoomRepository(
             }
         }
 
+    /**
+     * Representa el conjunto de payloads cifrados y su huella.
+     */
     private data class GroupKeyWriteSet(
         val payloads: Map<String, MutableMap<String, Any?>>, // uid -> encrypted payload
         val keyFingerprint: String,
     )
 
+    /**
+     * Resultado de una transacción de abandono de grupo.
+     */
     private data class LeaveGroupTransactionResult(
         val remainingParticipantIds: List<String>,
         val changed: Boolean,
     )
 
+    /**
+     * Resultado intermedio al agregar miembros antes de rotar la clave.
+     */
     private data class AddMembersTransactionResult(
         val addedMembers: List<User>,
         val participantIds: List<String>,
         val groupKeyVersion: Int,
     )
 
+    /**
+     * Recupera perfiles de usuario en lotes manejando la limitación de `whereIn`.
+     */
     private fun fetchUsersByIds(
         uids: List<String>,
         onSuccess: (List<User>) -> Unit,

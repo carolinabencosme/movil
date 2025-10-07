@@ -6,8 +6,14 @@ import com.example.texty.util.OnlineStatusTracker
 import com.google.android.material.color.DynamicColors
 import android.os.Build
 
-// Inicializa configuración global de la app.
+/**
+ * Inicializa la configuración global que la app requiere antes de mostrar pantallas.
+ */
 class TextyApplication : Application() {
+
+  /**
+   * Configura colores dinámicos, el rastreador de estado en línea y el manejo de errores.
+   */
   override fun onCreate() {
     super.onCreate()
 

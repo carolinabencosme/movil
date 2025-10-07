@@ -11,6 +11,9 @@ import java.security.GeneralSecurityException
 import java.security.SecureRandom
 import org.json.JSONObject
 
+/**
+ * Funciones de cifrado y descifrado de mensajes de texto y resúmenes.
+ */
 object MessageCrypto {
     const val CURRENT_SCHEME_VERSION = 1
     private const val KEY_SIZE_BYTES = 32

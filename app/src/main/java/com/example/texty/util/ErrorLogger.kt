@@ -5,6 +5,9 @@ import android.widget.Toast
 import java.io.File
 import java.util.UUID
 
+/**
+ * Envía errores a Firebase Crashlytics y logcat.
+ */
 object ErrorLogger {
   fun log(context: Context, throwable: Throwable) {
     val id = UUID.randomUUID().toString()

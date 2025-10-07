@@ -20,7 +20,9 @@ data class OneTimePreKeyInfo(
     val publicKey: String = ""
 )
 
-// Convierte un usuario en su paquete de claves públicas si está completo.
+/**
+ * Convierte un usuario en su paquete de claves públicas si está completo.
+ */
 fun User.toKeyBundle(): KeyBundle? {
     val identity = identityPublicKey
     val signatureKey = identitySignaturePublicKey

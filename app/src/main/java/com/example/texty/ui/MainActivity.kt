@@ -23,6 +23,9 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.launch
 
+/**
+ * Actividad principal que controla la navegación inferior y permisos de la app.
+ */
 class MainActivity : AppCompatActivity() {
 
     private var suppressNavigationHandling = false

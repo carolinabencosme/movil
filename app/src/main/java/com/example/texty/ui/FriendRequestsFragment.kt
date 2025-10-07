@@ -21,6 +21,9 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
+/**
+ * Fragmento que muestra solicitudes de amistad y permite aceptarlas o rechazarlas.
+ */
 class FriendRequestsFragment : Fragment() {
     private val repository = FriendRequestRepository()
     private lateinit var adapter: FriendRequestAdapter

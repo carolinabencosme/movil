@@ -24,6 +24,9 @@ import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 import com.google.android.material.snackbar.Snackbar
 
+/**
+ * Pantalla de registro que crea cuentas y publica el perfil inicial.
+ */
 class RegisterActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)

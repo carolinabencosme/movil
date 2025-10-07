@@ -16,6 +16,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+/**
+ * Utilidades para cifrar, descifrar y cachear adjuntos multimedia.
+ */
 object AttachmentCrypto {
     private const val KEY_SIZE_BYTES = 32
     private const val NONCE_SIZE_BYTES = 24

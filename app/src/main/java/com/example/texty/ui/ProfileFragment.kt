@@ -25,6 +25,9 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.ktx.storage
 
+/**
+ * Fragmento donde el usuario edita su perfil y gestiona la sesión.
+ */
 class ProfileFragment : Fragment(), PendingChangesHandler {
     private var imageUri: Uri? = null
     private var currentProfile: User? = null

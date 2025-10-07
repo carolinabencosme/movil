@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import com.example.texty.R
 import com.github.chrisbanes.photoview.PhotoView
 
+/**
+ * Actividad ligera para mostrar adjuntos de imagen a pantalla completa.
+ */
 class ImagePreviewActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

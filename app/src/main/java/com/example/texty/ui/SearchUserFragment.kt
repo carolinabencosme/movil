@@ -21,6 +21,9 @@ import com.example.texty.util.ErrorLogger
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 
+/**
+ * Fragmento para buscar usuarios y enviar solicitudes de amistad.
+ */
 class SearchUserFragment : Fragment() {
     private val userRepository = UserRepository()
     private val friendRepository = FriendRequestRepository()

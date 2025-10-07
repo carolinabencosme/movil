@@ -11,9 +11,15 @@ import kotlinx.coroutines.tasks.await
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 
+/**
+ * Gestiona la persistencia y derivación de claves de sesión para chats directos y grupales.
+ */
 class SessionKeyRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore,
 ) {
+    /**
+     * Recupera la clave raíz de sesión para una sala; deriva material para grupos si es necesario.
+     */
     suspend fun loadSessionKey(
         roomId: String,
         ownerUid: String,
@@ -80,9 +86,15 @@ class SessionKeyRepository(
     }
 
 
+    /**
+     * Convierte cadenas base64 en bytes para claves almacenadas.
+     */
     private fun decodeBase64(value: String): ByteArray =
         Base64.decode(value, Base64.NO_WRAP)
 
+    /**
+     * Deriva determinísticamente el material simétrico usado para cifrar chats grupales.
+     */
     private fun deriveGroupKeyMaterial(roomId: String): ByteArray {
         val digest = MessageDigest.getInstance("SHA-256")
         digest.update("group".toByteArray(StandardCharsets.UTF_8))
@@ -90,6 +102,9 @@ class SessionKeyRepository(
         return digest.digest()
     }
 
+    /**
+     * Guarda o actualiza el material de sesión para un participante de la sala.
+     */
     suspend fun saveSessionKey(
         roomId: String,
         ownerUid: String,

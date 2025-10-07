@@ -20,7 +20,9 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
-// Maneja tokens FCM y muestra notificaciones.
+/**
+ * Servicio que recibe mensajes push de Firebase y publica notificaciones locales.
+ */
 class MessagingService : FirebaseMessagingService() {
 
   companion object {
@@ -29,6 +31,9 @@ class MessagingService : FirebaseMessagingService() {
     private const val TAG = "MessagingService"
   }
 
+  /**
+   * Construye y muestra una notificación cuando llega un mensaje FCM.
+   */
   override fun onMessageReceived(message: RemoteMessage) {
     // Gestiona cada mensaje entrante y genera la notificación.
     // --- Datos que pueden venir en el payload de data (desde la Cloud Function) ---
@@ -99,6 +104,9 @@ class MessagingService : FirebaseMessagingService() {
     }
   }
 
+  /**
+   * Sincroniza el token FCM con Firestore cuando Firebase lo renueva.
+   */
   override fun onNewToken(token: String) {
     super.onNewToken(token)
     val currentUser = Firebase.auth.currentUser ?: return
@@ -117,6 +125,9 @@ class MessagingService : FirebaseMessagingService() {
 
   // --- Helpers ---
 
+  /**
+   * Comprueba permisos y ajustes del sistema antes de publicar una notificación.
+   */
   private fun canPostNotifications(): Boolean {
     // Verifica permiso y habilitación del canal.
     // Android 13+ requiere POST_NOTIFICATIONS
@@ -129,6 +140,9 @@ class MessagingService : FirebaseMessagingService() {
     return NotificationManagerCompat.from(this).areNotificationsEnabled()
   }
 
+  /**
+   * Crea el canal de notificaciones de mensajes en dispositivos Android O o superior.
+   */
   private fun createChannelIfNeeded() {
     // Define el canal de mensajes en Android O+.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

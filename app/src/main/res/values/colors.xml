@@ -1,49 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Luxury amber & graphite palette -->
-    <color name="md_theme_light_primary">#FBBF24</color>
-    <color name="md_theme_light_onPrimary">#0F0F0F</color>
-    <color name="md_theme_light_primaryContainer">#FFE3A3</color>
-    <color name="md_theme_light_onPrimaryContainer">#070400</color>
+    <!-- Dreamy lavender & seafoam palette -->
+    <color name="md_theme_light_primary">#C7AFFF</color>
+    <color name="md_theme_light_onPrimary">#251A3C</color>
+    <color name="md_theme_light_primaryContainer">#3B2C55</color>
+    <color name="md_theme_light_onPrimaryContainer">#F4EDFF</color>
 
-    <color name="md_theme_light_secondary">#A0A0A0</color>
-    <color name="md_theme_light_onSecondary">#0F0F0F</color>
-    <color name="md_theme_light_secondaryContainer">#1F1F1F</color>
-    <color name="md_theme_light_onSecondaryContainer">#F5F5F5</color>
+    <color name="md_theme_light_secondary">#89D8C2</color>
+    <color name="md_theme_light_onSecondary">#08241E</color>
+    <color name="md_theme_light_secondaryContainer">#274F45</color>
+    <color name="md_theme_light_onSecondaryContainer">#DAF7EF</color>
 
-    <color name="md_theme_light_tertiary">#FFD580</color>
-    <color name="md_theme_light_surface">#0F0F0F</color>
-    <color name="md_theme_light_surfaceVariant">#141414</color>
-    <color name="md_theme_light_surfaceContainer">#161616</color>
-    <color name="md_theme_light_onSurface">#F5F5F5</color>
-    <color name="md_theme_light_onSurfaceVariant">#C0C0C0</color>
-    <color name="md_theme_light_outline">#333333</color>
-    <color name="md_theme_light_outlineVariant">#262626</color>
-    <color name="md_theme_light_error">#FF6B6B</color>
-    <color name="md_theme_light_warning">#E6A93E</color>
-    <color name="md_theme_light_success">#3DD598</color>
+    <color name="md_theme_light_tertiary">#F6BCD5</color>
+    <color name="md_theme_light_surface">#141223</color>
+    <color name="md_theme_light_surfaceVariant">#1C1A2C</color>
+    <color name="md_theme_light_surfaceContainer">#201E31</color>
+    <color name="md_theme_light_onSurface">#F6F2FF</color>
+    <color name="md_theme_light_onSurfaceVariant">#CBC6E1</color>
+    <color name="md_theme_light_outline">#3F3A53</color>
+    <color name="md_theme_light_outlineVariant">#2C283D</color>
+    <color name="md_theme_light_error">#F28B82</color>
+    <color name="md_theme_light_warning">#F7C27D</color>
+    <color name="md_theme_light_success">#8EE5C2</color>
 
-    <color name="colorSuccess">#3DD598</color>
-    <color name="colorWarning">#E6A93E</color>
-    <color name="colorError">#FF6B6B</color>
-    <color name="colorInfo">#58B7FF</color>
+    <color name="colorSuccess">#8EE5C2</color>
+    <color name="colorWarning">#F7C27D</color>
+    <color name="colorError">#F28B82</color>
+    <color name="colorInfo">#8ABFF9</color>
 
-    <color name="colorCardStroke">#33FFC45C</color>
-    <color name="glass_background">#26F5F5F5</color>
-    <color name="glass_background_elevated">#40F5F5F5</color>
-    <color name="glass_stroke">#40FBBF24</color>
+    <color name="colorCardStroke">#33C7AFFF</color>
+    <color name="glass_background">#1AE3E1F6</color>
+    <color name="glass_background_elevated">#26E3E1F6</color>
+    <color name="glass_stroke">#40C7AFFF</color>
 
-    <color name="message_incoming_bg">#CC1E1E1E</color>
-    <color name="message_incoming_stroke">#26FFFFFF</color>
-    <color name="message_outgoing_start">#FFD580</color>
-    <color name="message_outgoing_end">#E6A93E</color>
+    <color name="message_incoming_bg">#2B2539</color>
+    <color name="message_incoming_stroke">#4A4362</color>
+    <color name="message_outgoing_start">#BFA8FF</color>
+    <color name="message_outgoing_end">#9F8BEB</color>
 
-    <color name="text_primary">#F5F5F5</color>
-    <color name="text_secondary">#B8B8B8</color>
-    <color name="text_muted">#8A8A8A</color>
+    <color name="text_primary">#F6F2FF</color>
+    <color name="text_secondary">#CBC6E1</color>
+    <color name="text_muted">#A19DBD</color>
 
-    <color name="bottom_nav_active">#FBBF24</color>
-    <color name="bottom_nav_inactive">#A0A0A0</color>
+    <color name="bottom_nav_active">#C7AFFF</color>
+    <color name="bottom_nav_inactive">#7E799B</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

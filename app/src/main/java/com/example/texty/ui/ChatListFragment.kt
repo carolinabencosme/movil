@@ -42,8 +42,11 @@ class ChatListFragment : Fragment() {
     private var cachedFriends: List<User>? = null
     private var pendingRooms: List<ChatRoom>? = null
     private var friendsRegistration: ListenerRegistration? = null
-    private val friendPresenceListeners = mutableMapOf<String, ListenerRegistration>()
+    private val presenceListeners = mutableMapOf<String, ListenerRegistration>()
+    private val presenceCache = mutableMapOf<String, User>()
     private val friendCache = mutableMapOf<String, User>()
+    private var trackedFriendIds: Set<String> = emptySet()
+    private var trackedParticipantIds: Set<String> = emptySet()
     private val chatRoomRepository = ChatRoomRepository()
 
     override fun onCreateView(
@@ -131,9 +134,12 @@ class ChatListFragment : Fragment() {
         super.onDestroyView()
         friendsRegistration?.remove()
         friendsRegistration = null
-        friendPresenceListeners.values.forEach { it.remove() }
-        friendPresenceListeners.clear()
+        presenceListeners.values.forEach { it.remove() }
+        presenceListeners.clear()
+        presenceCache.clear()
         friendCache.clear()
+        trackedFriendIds = emptySet()
+        trackedParticipantIds = emptySet()
         cachedFriends = null
     }
 
@@ -153,18 +159,31 @@ class ChatListFragment : Fragment() {
                     ?.toSet()
                     ?: emptySet()
 
-                updateFriendListeners(friendIds)
+                updateTrackedFriends(friendIds)
             }
     }
 
-    private fun updateFriendListeners(friendIds: Set<String>) {
-        val removed = friendPresenceListeners.keys - friendIds
+    private fun updateTrackedFriends(friendIds: Set<String>) {
+        if (friendIds == trackedFriendIds) return
+
+        trackedFriendIds = friendIds
+        val removedFriends = friendCache.keys - trackedFriendIds
+        removedFriends.forEach { friendCache.remove(it) }
+        refreshPresenceListeners()
+    }
+
+    private fun refreshPresenceListeners() {
+        val currentUid = Firebase.auth.currentUser?.uid ?: return
+        val targetIds = (trackedFriendIds + trackedParticipantIds) - currentUid
+
+        val removed = presenceListeners.keys - targetIds
         removed.forEach { uid ->
-            friendPresenceListeners.remove(uid)?.remove()
+            presenceListeners.remove(uid)?.remove()
+            presenceCache.remove(uid)
             friendCache.remove(uid)
         }
 
-        val added = friendIds - friendPresenceListeners.keys
+        val added = targetIds - presenceListeners.keys
         added.forEach { uid ->
             val registration = Firebase.firestore
                 .collection("users")
@@ -175,26 +194,38 @@ class ChatListFragment : Fragment() {
                         return@addSnapshotListener
                     }
 
-                    val user = snapshot?.toObject(User::class.java)
-                    if (user != null) {
-                        friendCache[uid] = user
+                    val fetched = snapshot?.toObject(User::class.java)
+                    if (fetched != null) {
+                        val user = if (fetched.uid.isBlank()) fetched.copy(uid = uid) else fetched
+                        presenceCache[uid] = user
+                        if (uid in trackedFriendIds) {
+                            friendCache[uid] = user
+                        } else {
+                            friendCache.remove(uid)
+                        }
                     } else {
+                        presenceCache.remove(uid)
                         friendCache.remove(uid)
                     }
-                    onFriendsCacheChanged()
+                    onPresenceCacheChanged()
                 }
-            friendPresenceListeners[uid] = registration
+            presenceListeners[uid] = registration
         }
 
-        onFriendsCacheChanged()
+        if (removed.isNotEmpty()) {
+            onPresenceCacheChanged()
+        } else if (added.isEmpty()) {
+            // No change in listeners but friend cache may have been trimmed (e.g., friend removed)
+            onPresenceCacheChanged()
+        }
     }
 
-    private fun onFriendsCacheChanged() {
+    private fun onPresenceCacheChanged() {
         val friends = friendCache.values
             .map { it }
             .sortedBy { it.displayName.ifBlank { it.uid }.lowercase(Locale.getDefault()) }
         cachedFriends = friends
-        adapter.updatePresence(friendCache.mapValues { it.value.isOnline })
+        adapter.updatePresence(presenceCache.mapValues { it.value.isOnline })
 
         val currentRooms = pendingRooms ?: viewModel.rooms.value ?: emptyList()
         pendingRooms = null
@@ -221,6 +252,15 @@ class ChatListFragment : Fragment() {
         }
 
         allRooms = combined
+
+        val newParticipantIds = combined
+            .filter { !it.isGroup }
+            .flatMap { room -> room.participantIds.filter { it != currentUid } }
+            .toSet()
+        if (newParticipantIds != trackedParticipantIds) {
+            trackedParticipantIds = newParticipantIds
+            refreshPresenceListeners()
+        }
 
         if (allRooms.isEmpty()) {
             placeholder.visibility = View.VISIBLE

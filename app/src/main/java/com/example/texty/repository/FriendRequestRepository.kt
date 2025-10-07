@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.UUID
 
+// Maneja solicitudes de amistad y el handshake de claves.
 class FriendRequestRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
@@ -36,6 +37,7 @@ class FriendRequestRepository(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Registra una nueva solicitud pendiente.
         val data = mapOf(
             "fromUid" to fromUid,
             "toUid" to toUid,
@@ -53,6 +55,7 @@ class FriendRequestRepository(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Acepta la solicitud y genera el room seguro.
         val requestRef = requestsCollection.document(requestId)
         val fromRef = usersCollection.document(fromUid)
         val toRef = usersCollection.document(toUid)
@@ -96,6 +99,7 @@ class FriendRequestRepository(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Elimina la solicitud pendiente.
         requestsCollection.document(requestId).delete()
             .addOnSuccessListener { onSuccess() }
             .addOnFailureListener(onFailure)
@@ -107,6 +111,7 @@ class FriendRequestRepository(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Reconstruye el handshake para forzar nuevas claves.
         val requesterRef = usersCollection.document(requesterUid)
         val peerRef = usersCollection.document(peerUid)
 
@@ -132,6 +137,7 @@ class FriendRequestRepository(
     }
 
     fun areFriends(uid1: String, uid2: String, onResult: (Boolean) -> Unit) {
+        // Indica si ambos usuarios ya son amigos.
         usersCollection.document(uid1).get()
             .addOnSuccessListener { doc ->
                 val friends = doc.get("friends") as? List<*> ?: emptyList<Any>()
@@ -145,6 +151,7 @@ class FriendRequestRepository(
         onSuccess: (List<FriendRequest>) -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Obtiene solicitudes pendientes para el usuario.
         requestsCollection
             .whereEqualTo("toUid", uid)
             .whereEqualTo("status", "pending")
@@ -163,6 +170,7 @@ class FriendRequestRepository(
         toUid: String,
         onResult: (String?) -> Unit,
     ) {
+        // Busca si ya existe una solicitud enviada.
         requestsCollection
             .whereEqualTo("fromUid", fromUid)
             .whereEqualTo("toUid", toUid)
@@ -185,6 +193,7 @@ class FriendRequestRepository(
         toRef: DocumentReference,
         toSnapshot: DocumentSnapshot,
     ): SessionWriteSet {
+        // Prepara los documentos y consumos de prekeys para ambos usuarios.
         val fromUser = fromSnapshot.toObject(User::class.java)
             ?: throw IllegalStateException("User $fromUid does not exist")
         val toUser = toSnapshot.toObject(User::class.java)
@@ -257,6 +266,7 @@ class FriendRequestRepository(
         transaction: Transaction,
         writeSet: SessionWriteSet,
     ) {
+        // Persiste el root del room y consume prekeys necesarios.
         val sessionRootRef = sessionsCollection.document(writeSet.roomId)
 
         val existingRoot = transaction.get(sessionRootRef)
@@ -295,6 +305,7 @@ class FriendRequestRepository(
     /** Persiste participants/{uid} con rootKey, versión, peerUid, etc. (fuera de la transacción).
      *  ⚠️ No sobrescribir rootKeyMaterial si ya existe (para conservar el historial). */
     private fun persistSessionKeys(writeSet: SessionWriteSet) {
+        // Guarda la rootKey local solo para el usuario actual.
         val repo = SessionKeyRepository(firestore)
         CoroutineScope(Dispatchers.IO).launch {
             val currentUid = Firebase.auth.currentUser?.uid ?: return@launch
@@ -344,6 +355,7 @@ class FriendRequestRepository(
         toUser: User,
         toBundle: KeyBundle,
     ): PreKeySelection? {
+        // Decide qué one-time pre-key usar en el handshake.
         val target = toUser.oneTimePreKeys.firstOrNull()
         if (target != null) {
             val remaining = toUser.oneTimePreKeys.filterNot { it.keyId == target.keyId }
@@ -378,6 +390,7 @@ class FriendRequestRepository(
         requiresReauth: Boolean,
         handshakeEpochMs: Long,
     ): MutableMap<String, Any?> {
+        // Construye el payload de sesión para cada participante.
         val peerBundleMap = mutableMapOf<String, Any?>(
             "uid" to peerUid,
             "identityKeyId" to peerBundle.identityKeyId,
@@ -430,6 +443,7 @@ class FriendRequestRepository(
         }
 
     private fun fingerprintBundle(bundle: KeyBundle): String {
+        // Calcula un hash estable para detectar cambios en el bundle.
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
             digest.update(decodeBase64(bundle.identityPublicKey))
@@ -452,6 +466,7 @@ class FriendRequestRepository(
         peerUid: String,
         peerBundle: KeyBundle,
     ): String {
+        // Deriva una clave raíz reproducible para el chat directo.
         return try {
             // Orden canónico por uid para que ambos lados deriven la misma clave
             val (aUid, aBundle, bUid, bBundle) =
@@ -488,9 +503,11 @@ class FriendRequestRepository(
     }
 
     private fun decodeBase64(value: String): ByteArray =
+        // Helper para decodificar cadenas Base64.
         Base64.decode(value, Base64.NO_WRAP)
 
     private fun buildDirectRoomId(uid1: String, uid2: String): String =
+        // Genera un id estable para el room entre dos usuarios.
         listOf(uid1, uid2).sorted().joinToString(SESSION_ROOM_ID_DELIMITER)
 
     private data class SessionWriteSet(
@@ -516,6 +533,7 @@ class FriendRequestRepository(
     )
 
     companion object {
+        // Constantes para manejar sesiones y colecciones.
         private const val SESSION_PROTOCOL_VERSION = 1
         private const val SESSION_ROOM_ID_DELIMITER = "_"
         private const val SESSION_PARTICIPANT_COLLECTION = "participants"

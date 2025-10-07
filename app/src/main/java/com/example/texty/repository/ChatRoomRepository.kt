@@ -23,6 +23,7 @@ import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
+// Gestiona salas, claves grupales y membresías.
 class ChatRoomRepository(
     private val firestore: FirebaseFirestore = Firebase.firestore
 ) {
@@ -39,6 +40,7 @@ class ChatRoomRepository(
         onSuccess: () -> Unit,
         onFailure: (Exception) -> Unit,
     ) {
+        // Crea un grupo nuevo y distribuye la clave inicial.
         val keyManager = KeyManager(context)
         val keyGenerationResult = keyManager.ensureKeyBundle()
         val creatorBundle = keyGenerationResult.bundle
@@ -113,6 +115,7 @@ class ChatRoomRepository(
         onFailure: (Exception) -> Unit,
         includeInitiatorInRecipients: Boolean = true,
     ) {
+        // Genera una nueva clave grupal y la publica.
         val keyManager = KeyManager(context)
         val keyGenerationResult = keyManager.ensureKeyBundle()
         val initiatorBundle = keyGenerationResult.bundle

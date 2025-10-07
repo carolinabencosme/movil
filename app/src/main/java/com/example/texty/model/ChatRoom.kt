@@ -2,6 +2,7 @@ package com.example.texty.model
 
 import com.google.firebase.Timestamp
 
+// Representa un chat con metadatos de sincronización.
 data class ChatRoom(
     val id: String = "",
     val participantIds: List<String> = emptyList(),

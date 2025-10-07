@@ -25,6 +25,8 @@ import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textfield.TextInputLayout
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
 class ChatListFragment : Fragment() {
@@ -37,7 +39,9 @@ class ChatListFragment : Fragment() {
     private lateinit var progressBar: CircularProgressIndicator
     private var cachedFriends: List<User>? = null
     private var pendingRooms: List<ChatRoom>? = null
-    private val userRepository = UserRepository()
+    private var friendsRegistration: ListenerRegistration? = null
+    private val friendPresenceListeners = mutableMapOf<String, ListenerRegistration>()
+    private val friendCache = mutableMapOf<String, User>()
     private val chatRoomRepository = ChatRoomRepository()
 
     override fun onCreateView(
@@ -105,58 +109,85 @@ class ChatListFragment : Fragment() {
             } else {
                 pendingRooms = list
             }
-            val uid = Firebase.auth.currentUser?.uid ?: return@observe // 👈 evita crash tras logout
-
-            UserRepository().getFriends(uid, onSuccess = { friends ->
-                adapter.updatePresence(friends.associate { it.uid to it.isOnline })
-                val friendRooms = friends.map { user ->
-                    ChatRoom(
-                        id = user.uid,
-                        participantIds = listOf(uid, user.uid),
-                        userNames = mapOf(
-                            uid to (Firebase.auth.currentUser?.displayName ?: "Yo"),
-                            user.uid to user.displayName
-                        ),
-                        isGroup = false,
-                        lastMessagePreview = null
-                    )
-                }
-
-                val combined = (list + friendRooms).distinctBy { room ->
-                    if (room.isGroup) room.id
-                    else room.participantIds.sorted().joinToString("_")
-                }
-
-                allRooms = combined
-
-                if (allRooms.isEmpty()) {
-                    placeholder.visibility = View.VISIBLE
-                    recycler.visibility = View.GONE
-                } else {
-                    placeholder.visibility = View.GONE
-                    recycler.visibility = View.VISIBLE
-                    filterRooms(searchInput.text?.toString() ?: "")
-                }
-            }, onFailure = { e ->
-                AppLogger.logError(requireContext(), e)
-            })
         }
 
-        loadFriends(currentUser.uid)
+        startFriendsRealtime(currentUser.uid)
         viewModel.startListening(currentUser.uid)
     }
 
 
-    private fun loadFriends(uid: String) {
-        userRepository.getFriends(uid, onSuccess = { friends ->
-            cachedFriends = friends
-            adapter.updatePresence(friends.associate { it.uid to it.isOnline })
-            val currentRooms = pendingRooms ?: viewModel.rooms.value ?: emptyList()
-            pendingRooms = null
-            combineRoomsAndRender(currentRooms, friends)
-        }, onFailure = { e ->
-            AppLogger.logError(requireContext(), e)
-        })
+    override fun onDestroyView() {
+        super.onDestroyView()
+        friendsRegistration?.remove()
+        friendsRegistration = null
+        friendPresenceListeners.values.forEach { it.remove() }
+        friendPresenceListeners.clear()
+        friendCache.clear()
+        cachedFriends = null
+    }
+
+    private fun startFriendsRealtime(uid: String) {
+        friendsRegistration?.remove()
+        friendsRegistration = Firebase.firestore
+            .collection("users")
+            .document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    context?.let { AppLogger.logError(it, error) }
+                    return@addSnapshotListener
+                }
+
+                val friendIds = (snapshot?.get("friends") as? List<*>)
+                    ?.mapNotNull { it as? String }
+                    ?.toSet()
+                    ?: emptySet()
+
+                updateFriendListeners(friendIds)
+            }
+    }
+
+    private fun updateFriendListeners(friendIds: Set<String>) {
+        val removed = friendPresenceListeners.keys - friendIds
+        removed.forEach { uid ->
+            friendPresenceListeners.remove(uid)?.remove()
+            friendCache.remove(uid)
+        }
+
+        val added = friendIds - friendPresenceListeners.keys
+        added.forEach { uid ->
+            val registration = Firebase.firestore
+                .collection("users")
+                .document(uid)
+                .addSnapshotListener { snapshot, error ->
+                    if (error != null) {
+                        context?.let { AppLogger.logError(it, error) }
+                        return@addSnapshotListener
+                    }
+
+                    val user = snapshot?.toObject(User::class.java)
+                    if (user != null) {
+                        friendCache[uid] = user
+                    } else {
+                        friendCache.remove(uid)
+                    }
+                    onFriendsCacheChanged()
+                }
+            friendPresenceListeners[uid] = registration
+        }
+
+        onFriendsCacheChanged()
+    }
+
+    private fun onFriendsCacheChanged() {
+        val friends = friendCache.values
+            .map { it }
+            .sortedBy { it.displayName.ifBlank { it.uid }.lowercase(Locale.getDefault()) }
+        cachedFriends = friends
+        adapter.updatePresence(friendCache.mapValues { it.value.isOnline })
+
+        val currentRooms = pendingRooms ?: viewModel.rooms.value ?: emptyList()
+        pendingRooms = null
+        combineRoomsAndRender(currentRooms, friends)
     }
 
     private fun combineRoomsAndRender(rooms: List<ChatRoom>, friends: List<User>) {

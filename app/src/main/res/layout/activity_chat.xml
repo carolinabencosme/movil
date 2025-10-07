@@ -85,7 +85,6 @@
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:layoutAnimation="@anim/layout_fade_through"
         android:clipToPadding="false"
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
@@ -105,36 +104,43 @@
         app:strokeColor="@color/colorCardStroke"
         app:strokeWidth="1dp">
 
-        <LinearLayout
+        <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+            android:minHeight="64dp"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
             android:paddingTop="12dp"
             android:paddingBottom="12dp">
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/buttonSendImage"
                 style="@style/AppButton.Icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 app:icon="@drawable/baseline_add_photo_alternate_24"
-                app:iconTint="?attr/colorOnSurfaceVariant" />
+                app:iconSize="20dp"
+                app:iconTint="?attr/colorOnSurfaceVariant"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/inputMessageLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="12dp"
                 android:layout_marginEnd="12dp"
                 android:layout_marginTop="0dp"
-                android:layout_weight="1"
-                android:minHeight="56dp"
+                android:minHeight="0dp"
                 style="@style/Widget.Texty.TextInputLayout"
                 app:endIconMode="none"
                 app:startIconDrawable="@drawable/baseline_add_reaction_24"
-                app:startIconTint="@color/text_input_icon">
+                app:startIconTint="@color/text_input_icon"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/buttonSend"
+                app:layout_constraintStart_toEndOf="@id/buttonSendImage"
+                app:layout_constraintTop_toTopOf="parent">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/editMessage"
@@ -145,7 +151,7 @@
                     android:inputType="textCapSentences|textMultiLine"
                     android:gravity="top|start"
                     android:maxLines="4"
-                    android:minHeight="56dp"
+                    android:minHeight="0dp"
                     android:minLines="1"
                     android:paddingVertical="12dp" />
             </com.google.android.material.textfield.TextInputLayout>
@@ -154,9 +160,12 @@
                 android:id="@+id/buttonSend"
                 style="@style/Widget.Texty.SendButton"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:icon="@drawable/ic_send" />
-        </LinearLayout>
+                android:layout_height="48dp"
+                app:icon="@drawable/ic_send"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>
 
 </LinearLayout>

@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/md_theme_light_surfaceContainer">
+    android:background="@android:color/transparent">
 
     <com.google.android.material.appbar.MaterialToolbar
         android:id="@+id/profileToolbar"
@@ -12,6 +12,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         app:title="@string/profile_title"
+        app:titleCentered="true"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -21,9 +22,9 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:animateLayoutChanges="true"
-        android:paddingStart="20dp"
-        android:paddingEnd="20dp"
-        android:paddingBottom="24dp"
+        android:paddingStart="24dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="28dp"
         app:layout_constraintTop_toBottomOf="@id/profileToolbar"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -34,7 +35,7 @@
             android:layout_height="wrap_content"
             android:gravity="center_horizontal"
             android:orientation="vertical"
-            android:paddingTop="24dp"
+            android:paddingTop="28dp"
             android:paddingBottom="8dp">
 
             <com.google.android.material.card.MaterialCardView
@@ -43,16 +44,16 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp"
                 android:animateLayoutChanges="true"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="28dp"
+                app:cardBackgroundColor="@color/glass_background_elevated"
+                app:cardCornerRadius="32dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/colorCardStroke"
+                app:strokeColor="@color/glass_stroke"
                 app:strokeWidth="1dp">
 
                 <androidx.constraintlayout.widget.ConstraintLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:padding="24dp">
+                    android:padding="28dp">
 
                     <com.google.android.material.imageview.ShapeableImageView
                         android:id="@+id/imageProfile"
@@ -151,23 +152,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp"
                 android:animateLayoutChanges="true"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="@color/glass_background_elevated"
+                app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/colorCardStroke"
+                app:strokeColor="@color/glass_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
                     <com.google.android.material.textview.MaterialTextView
                         style="@style/TextAppearance.Material3.TitleSmall"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/notifications" />
+                        android:text="@string/notifications"
+                        android:textColor="@color/text_primary" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchNotifications"
@@ -175,7 +177,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:fontFamily="sans-serif"
-                        android:text="@string/enable_notifications" />
+                        android:text="@string/enable_notifications"
+                        android:textColor="@color/text_secondary"
+                        app:thumbTint="@color/switch_thumb_tint"
+                        app:trackTint="@color/switch_track_tint" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -185,23 +190,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="20dp"
                 android:animateLayoutChanges="true"
-                app:cardBackgroundColor="?attr/colorSurface"
-                app:cardCornerRadius="24dp"
+                app:cardBackgroundColor="@color/glass_background_elevated"
+                app:cardCornerRadius="28dp"
                 app:cardElevation="0dp"
-                app:strokeColor="@color/colorCardStroke"
+                app:strokeColor="@color/glass_stroke"
                 app:strokeWidth="1dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="20dp">
+                    android:padding="24dp">
 
                     <com.google.android.material.textview.MaterialTextView
                         style="@style/TextAppearance.Material3.TitleSmall"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:text="@string/privacy" />
+                        android:text="@string/privacy"
+                        android:textColor="@color/text_primary" />
 
                     <com.google.android.material.materialswitch.MaterialSwitch
                         android:id="@+id/switchPrivacy"
@@ -209,7 +215,10 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="12dp"
                         android:fontFamily="sans-serif"
-                        android:text="@string/private_account" />
+                        android:text="@string/private_account"
+                        android:textColor="@color/text_secondary"
+                        app:thumbTint="@color/switch_thumb_tint"
+                        app:trackTint="@color/switch_track_tint" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 

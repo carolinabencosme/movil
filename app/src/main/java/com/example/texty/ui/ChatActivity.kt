@@ -23,6 +23,7 @@ import androidx.core.widget.addTextChangedListener
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SimpleItemAnimator
 import com.example.texty.R
 import com.example.texty.NotificationCounter
 import com.example.texty.model.MessageBody
@@ -180,6 +181,14 @@ class ChatActivity : AppCompatActivity() {
 
     recyclerView.layoutManager = LinearLayoutManager(this).apply { stackFromEnd = true }
     recyclerView.adapter = adapter
+    recyclerView.setHasFixedSize(true)
+    (recyclerView.itemAnimator as? SimpleItemAnimator)?.apply {
+      supportsChangeAnimations = false
+      changeDuration = 0L
+      moveDuration = 120L
+      addDuration = 120L
+      removeDuration = 120L
+    }
 
     val resolvedRoomId = if (isGroupChat) {
       roomId ?: error("roomId must be set for group chats")
@@ -581,10 +590,14 @@ class ChatActivity : AppCompatActivity() {
                 val mapper = messageMapper ?: return@addSnapshotListener
                 val docs = value?.documents ?: return@addSnapshotListener
                 val mapped = docs.mapNotNull { mapper.map(it) }
+                val newMessages = mapped.map { it.message }
 
-                adapter.submitList(mapped.map { it.message })
-                if (adapter.itemCount > 0) {
-                    recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
+                adapter.submitList(newMessages) {
+                    if (newMessages.isNotEmpty()) {
+                        recyclerView.post {
+                            recyclerView.smoothScrollToPosition(newMessages.size - 1)
+                        }
+                    }
                 }
 
                 // === AUTO-RESYNC: si alguno pide resincronizar, intenta negociar sesión y remapear ===
@@ -601,9 +614,13 @@ class ChatActivity : AppCompatActivity() {
                             messageMapper = MessageMapper(newInfo)
                             // Remapea inmediatamente con la nueva sesión
                             val remapped = docs.mapNotNull { messageMapper?.map(it) }
-                            adapter.submitList(remapped.map { it.message })
-                            if (adapter.itemCount > 0) {
-                                recyclerView.post { recyclerView.smoothScrollToPosition(adapter.itemCount - 1) }
+                            val remappedMessages = remapped.map { it.message }
+                            adapter.submitList(remappedMessages) {
+                                if (remappedMessages.isNotEmpty()) {
+                                    recyclerView.post {
+                                        recyclerView.smoothScrollToPosition(remappedMessages.size - 1)
+                                    }
+                                }
                             }
                         } else {
                             showStatusMessage(R.string.chat_session_requires_resync, Toast.LENGTH_LONG)

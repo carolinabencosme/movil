@@ -16,11 +16,13 @@
     <string name="display_name">Nombre</string>
     <string name="profile_photo">Foto de perfil</string>
     <string name="chats_title">Chats</string>
+    <string name="chats_subtitle">Conecta y conversa con estilo</string>
     <string name="error_invalid_user">Usuario no registrado</string>
     <string name="error_invalid_credentials">Credenciales incorrectas</string>
     <string name="error_network">Error de red</string>
     <string name="no_chats_placeholder">No tienes chats aún</string>
     <string name="share_logs">Compartir logs</string>
+    <string name="create_group">Nuevo grupo</string>
     <string name="new_chat">Nuevo chat</string>
     <string name="error_group_name_required">Escribe un nombre para el grupo</string>
     <string name="error_group_members_required">Selecciona al menos un miembro</string>

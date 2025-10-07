@@ -5,8 +5,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.TextView
+import android.widget.LinearLayout
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -18,36 +18,84 @@ import java.util.Locale
 class ChatAdapter(
     private val myUid: String,
     private val onBindAttachment: (Message, ImageView, TextView) -> Unit,
-    // NUEVO: indica si el chat es grupal
     private val isGroupChat: Boolean = false,
-    // NUEVO: cómo obtener el nombre a partir del senderId (puedes mapear desde cache o Firestore)
     private val resolveSenderName: (String) -> String? = { null }
 ) : ListAdapter<Message, ChatAdapter.MessageViewHolder>(DIFF_CALLBACK) {
 
-    class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
-        val root: LinearLayout = view.findViewById(R.id.messageRoot)
-        val senderText: TextView = view.findViewById(R.id.textSender)      // NUEVO
-        val messageText: TextView = view.findViewById(R.id.textMessage)
-        val timeText: TextView = view.findViewById(R.id.textTime)
-        val imageView: ImageView = view.findViewById(R.id.imageMessage)
+    sealed class MessageViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        class Bubble(view: View) : MessageViewHolder(view) {
+            val root: LinearLayout = view.findViewById(R.id.messageRoot)
+            val senderText: TextView = view.findViewById(R.id.textSender)
+            val messageText: TextView = view.findViewById(R.id.textMessage)
+            val timeText: TextView = view.findViewById(R.id.textTime)
+            val imageView: ImageView = view.findViewById(R.id.imageMessage)
+        }
+
+        class Status(view: View) : MessageViewHolder(view) {
+            val statusText: TextView = view.findViewById(R.id.textStatus)
+        }
     }
 
     private val timeFormatter = SimpleDateFormat("hh:mm a", Locale.getDefault())
 
+    override fun getItemViewType(position: Int): Int {
+        val message = getItem(position)
+        return when {
+            message.isSystemMessage() -> TYPE_SYSTEM
+            message.senderId == myUid -> TYPE_SENT
+            else -> TYPE_RECEIVED
+        }
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MessageViewHolder {
-        val view = LayoutInflater.from(parent.context)
-            .inflate(R.layout.item_message, parent, false)
-        return MessageViewHolder(view)
+        val inflater = LayoutInflater.from(parent.context)
+        return when (viewType) {
+            TYPE_SYSTEM -> {
+                val view = inflater.inflate(R.layout.item_message_status, parent, false)
+                MessageViewHolder.Status(view)
+            }
+            else -> {
+                val view = inflater.inflate(R.layout.item_message, parent, false)
+                MessageViewHolder.Bubble(view)
+            }
+        }
     }
 
     override fun onBindViewHolder(holder: MessageViewHolder, position: Int) {
         val message = getItem(position)
+        when (holder) {
+            is MessageViewHolder.Status -> bindStatusMessage(holder, message)
+            is MessageViewHolder.Bubble -> bindBubbleMessage(holder, message, position)
+        }
+    }
 
-        // Reset de imagen
+    private fun bindStatusMessage(holder: MessageViewHolder.Status, message: Message) {
+        val context = holder.itemView.context
+        val text = when {
+            message.decryptionError && message.requiresKeyResync ->
+                context.getString(R.string.chat_message_unavailable_resync)
+            message.decryptionError ->
+                context.getString(R.string.chat_message_unavailable)
+            message.decrypted?.displayText?.isNotBlank() == true ->
+                message.decrypted.displayText.trim()
+            message.decrypted?.body?.text?.isNullOrBlank() == false ->
+                message.decrypted.body?.text?.trim().orEmpty()
+            !message.messageType.isNullOrBlank() ->
+                message.messageType.orEmpty()
+            else ->
+                context.getString(R.string.chat_message_unavailable)
+        }
+        holder.statusText.text = text
+    }
+
+    private fun bindBubbleMessage(
+        holder: MessageViewHolder.Bubble,
+        message: Message,
+        position: Int,
+    ) {
         holder.imageView.setImageDrawable(null)
         holder.imageView.visibility = View.GONE
 
-        // Texto (con fallback por cifrado)
         val context = holder.itemView.context
         val decrypted = message.decrypted
         val textToDisplay = when {
@@ -69,7 +117,6 @@ class ChatAdapter(
         holder.messageText.visibility = View.VISIBLE
         holder.messageText.text = textToDisplay
 
-        // Burbuja entrante/saliente
         val isMine = message.senderId == myUid
         if (isMine) {
             holder.root.gravity = Gravity.END
@@ -81,7 +128,6 @@ class ChatAdapter(
             holder.imageView.setBackgroundResource(R.drawable.bubble_incoming)
         }
 
-        // Hora
         val ts = message.createdAt
         if (ts != null) {
             holder.timeText.text = timeFormatter.format(ts.toDate())
@@ -91,32 +137,33 @@ class ChatAdapter(
             holder.timeText.visibility = View.INVISIBLE
         }
 
-        // Adjuntos (mantienes tu callback)
         onBindAttachment(message, holder.imageView, holder.messageText)
 
-        // --------- NUEVO: nombre del remitente estilo WhatsApp ----------
-        // Mostrar solo en chat grupal, en mensajes entrantes, y cuando cambie el remitente
         val prevSenderId = getPrevSenderId(position)
         val showSender = isGroupChat && !isMine && message.senderId != prevSenderId
 
         if (showSender) {
-            val name = message.senderName ?: resolveSenderName(message.senderId ?: "")
+            val name = message.senderName.ifBlank { resolveSenderName(message.senderId) }
             if (!name.isNullOrBlank()) {
                 holder.senderText.text = name
                 holder.senderText.visibility = View.VISIBLE
             } else {
-                // Si no tienes nombre, ocúltalo para no mostrar un guion
                 holder.senderText.visibility = View.GONE
             }
         } else {
             holder.senderText.visibility = View.GONE
         }
-        // ----------------------------------------------------------------
     }
 
     private fun getPrevSenderId(position: Int): String? {
         if (position <= 0) return null
-        return getItem(position - 1).senderId
+        for (index in position - 1 downTo 0) {
+            val previous = getItem(index)
+            if (!previous.isSystemMessage()) {
+                return previous.senderId
+            }
+        }
+        return null
     }
 
     fun addOne(message: Message) {
@@ -126,6 +173,9 @@ class ChatAdapter(
     }
 
     companion object {
+        private const val TYPE_SENT = 0
+        private const val TYPE_RECEIVED = 1
+        private const val TYPE_SYSTEM = 2
         private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<Message>() {
             override fun areItemsTheSame(oldItem: Message, newItem: Message): Boolean {
                 return oldItem.id == newItem.id
@@ -134,5 +184,11 @@ class ChatAdapter(
                 return oldItem == newItem
             }
         }
+    }
+
+    private fun Message.isSystemMessage(): Boolean {
+        if (senderId.isBlank()) return true
+        val normalizedType = messageType?.lowercase(Locale.US) ?: return false
+        return normalizedType.startsWith("system") || normalizedType.startsWith("status")
     }
 }

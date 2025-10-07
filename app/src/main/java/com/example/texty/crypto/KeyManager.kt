@@ -18,8 +18,10 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
+// Gestiona la generación y persistencia de llaves de Signal.
 class KeyManager(context: Context) {
 
+    // Resultado agregado al asegurar llaves.
     data class KeyGenerationResult(
         val bundle: KeyBundle,
         val identityKeyUpdated: Boolean,
@@ -27,8 +29,10 @@ class KeyManager(context: Context) {
         val oneTimePreKeysUpdated: Boolean
     )
 
+    // Representa un par de llaves cacheado.
     private data class StoredKeyPair(val publicKey: String, val privateKey: String)
 
+    // Representa un signed pre-key almacenado.
     private data class StoredSignedPreKey(
         val keyId: Int,
         val publicKey: String,
@@ -36,6 +40,7 @@ class KeyManager(context: Context) {
         val signature: String
     )
 
+    // Representa un one-time pre-key almacenado.
     private data class StoredOneTimePreKey(
         val keyId: Int,
         val publicKey: String,
@@ -46,6 +51,7 @@ class KeyManager(context: Context) {
     private val lock = Any()
 
     init {
+        // Registra Tink y prepara preferencias cifradas.
         try {
             TinkConfig.register()
         } catch (e: GeneralSecurityException) {
@@ -57,6 +63,7 @@ class KeyManager(context: Context) {
     }
 
     /** Crea EncryptedSharedPreferences y, si hay corrupción de clave, hace reset controlado. */
+    // Construye las preferencias cifradas con recuperación.
     private fun buildSecurePrefs(context: Context): SharedPreferences {
         fun create(): SharedPreferences {
             val masterKey = MasterKey.Builder(context, MASTER_ALIAS)
@@ -96,6 +103,7 @@ class KeyManager(context: Context) {
     }
 
     fun ensureKeyBundle(minOneTimePreKeys: Int = DEFAULT_ONE_TIME_PRE_KEY_POOL_SIZE): KeyGenerationResult {
+        // Garantiza un paquete listo de llaves activas.
         synchronized(lock) {
             val (identity, newIdentity) = ensureIdentityKeyPair()
             val (signingKey, newSigningKey) = ensureIdentitySigningKeyPair()
@@ -122,6 +130,7 @@ class KeyManager(context: Context) {
     }
 
     fun rotateSignedPreKey(): KeyGenerationResult {
+        // Fuerza un nuevo signed pre-key.
         synchronized(lock) {
             val (identity, newIdentity) = ensureIdentityKeyPair()
             val (signingKey, newSigningKey) = ensureIdentitySigningKeyPair()
@@ -148,6 +157,7 @@ class KeyManager(context: Context) {
     }
 
     fun getCachedBundle(): KeyBundle? {
+        // Obtiene el paquete guardado localmente.
         val identityPublic = prefs.getString(PREF_IDENTITY_PUBLIC, null)
         val signingPublic = prefs.getString(PREF_IDENTITY_SIGNING_PUBLIC, null)
         val signedPreKeyPublic = prefs.getString(PREF_SIGNED_PRE_KEY_PUBLIC, null)
@@ -174,9 +184,11 @@ class KeyManager(context: Context) {
         )
     }
 
+    // Cuenta one-time pre-keys disponibles.
     fun getRemainingOneTimePreKeyCount(): Int = loadOneTimePreKeys().size
 
     fun ensureMinimumOneTimePreKeys(threshold: Int = MIN_ONE_TIME_PRE_KEY_THRESHOLD): KeyGenerationResult? {
+        // Repone llaves si bajan del umbral dado.
         synchronized(lock) {
             val current = loadOneTimePreKeys()
             return if (current.size < threshold) {
@@ -188,6 +200,7 @@ class KeyManager(context: Context) {
     }
 
     fun markOneTimePreKeyAsUsed(keyId: Int) {
+        // Remueve la llave de un solo uso utilizada.
         synchronized(lock) {
             val preKeys = loadOneTimePreKeys().toMutableList()
             val removed = preKeys.removeAll { it.keyId == keyId }
@@ -198,24 +211,29 @@ class KeyManager(context: Context) {
     }
 
     fun getPrivateOneTimePreKey(keyId: Int): ByteArray? {
+        // Devuelve la llave privada asociada a un id.
         val match = loadOneTimePreKeys().firstOrNull { it.keyId == keyId } ?: return null
         return decode(match.privateKey)
     }
 
     fun getIdentityPrivateKey(): ByteArray? {
+        // Lee la llave privada de identidad.
         val stored = prefs.getString(PREF_IDENTITY_PRIVATE, null) ?: return null
         return decode(stored)
     }
 
     fun getIdentityPublicKey(): ByteArray? {
+        // Lee la llave pública de identidad.
         val stored = prefs.getString(PREF_IDENTITY_PUBLIC, null) ?: return null
         return decode(stored)
     }
 
     fun getIdentityPublicKeyBase64(): String? =
+        // Devuelve la llave pública codificada.
         prefs.getString(PREF_IDENTITY_PUBLIC, null)
 
     private fun ensureIdentityKeyPair(): Pair<StoredKeyPair, Boolean> {
+        // Crea o reutiliza la pareja X25519 principal.
         val existingPublic = prefs.getString(PREF_IDENTITY_PUBLIC, null)
         val existingPrivate = prefs.getString(PREF_IDENTITY_PRIVATE, null)
         if (!existingPublic.isNullOrBlank() && !existingPrivate.isNullOrBlank()) {
@@ -235,6 +253,7 @@ class KeyManager(context: Context) {
     }
 
     private fun ensureIdentitySigningKeyPair(): Pair<StoredKeyPair, Boolean> {
+        // Crea o reutiliza la pareja Ed25519 de firma.
         val existingPublic = prefs.getString(PREF_IDENTITY_SIGNING_PUBLIC, null)
         val existingPrivate = prefs.getString(PREF_IDENTITY_SIGNING_PRIVATE, null)
         if (!existingPublic.isNullOrBlank() && !existingPrivate.isNullOrBlank()) {
@@ -253,6 +272,7 @@ class KeyManager(context: Context) {
     }
 
     private fun ensureSignedPreKey(signingKey: StoredKeyPair, force: Boolean = false): Pair<StoredSignedPreKey, Boolean> {
+        // Genera un signed pre-key y firma con la llave de identidad.
         val existingId = prefs.getInt(PREF_SIGNED_PRE_KEY_ID, -1)
         val existingPublic = prefs.getString(PREF_SIGNED_PRE_KEY_PUBLIC, null)
         val existingPrivate = prefs.getString(PREF_SIGNED_PRE_KEY_PRIVATE, null)
@@ -284,6 +304,7 @@ class KeyManager(context: Context) {
     }
 
     private fun ensureOneTimePreKeys(targetCount: Int): Pair<List<StoredOneTimePreKey>, Boolean> {
+        // Garantiza un pool suficiente de pre-keys de un uso.
         val current = loadOneTimePreKeys().toMutableList()
         if (current.size >= targetCount) {
             return current to false
@@ -298,6 +319,7 @@ class KeyManager(context: Context) {
     }
 
     private fun generateOneTimePreKey(): StoredOneTimePreKey {
+        // Genera una nueva llave efímera con id único.
         val privateKey = X25519.generatePrivateKey()
         val publicKey = X25519.publicFromPrivate(privateKey)
         val keyId = nextPreKeyId()
@@ -305,6 +327,7 @@ class KeyManager(context: Context) {
     }
 
     private fun loadOneTimePreKeys(): List<StoredOneTimePreKey> {
+        // Lee y parsea las llaves guardadas.
         val raw = prefs.getString(PREF_ONE_TIME_PRE_KEYS, null) ?: return emptyList()
         val list = mutableListOf<StoredOneTimePreKey>()
         try {
@@ -323,6 +346,7 @@ class KeyManager(context: Context) {
     }
 
     private fun saveOneTimePreKeys(preKeys: List<StoredOneTimePreKey>) {
+        // Serializa y guarda la lista ordenada de llaves.
         val array = JSONArray()
         preKeys.sortedBy { it.keyId }.forEach { preKey ->
             val obj = JSONObject()
@@ -335,12 +359,14 @@ class KeyManager(context: Context) {
     }
 
     private fun nextPreKeyId(): Int {
+        // Incrementa el contador de identificadores.
         val next = prefs.getInt(PREF_NEXT_PRE_KEY_ID, INITIAL_PRE_KEY_ID)
         prefs.edit().putInt(PREF_NEXT_PRE_KEY_ID, next + 1).apply()
         return next
     }
 
     private fun sign(privateKeyBase64: String, data: ByteArray): String {
+        // Firma datos con la llave Ed25519 privada.
         val privateKey = decode(privateKeyBase64)
         val signer = Ed25519Sign(privateKey)
         val signature = signer.sign(data)
@@ -348,12 +374,15 @@ class KeyManager(context: Context) {
     }
 
     private fun encode(data: ByteArray): String =
+        // Codifica bytes a Base64 sin saltos.
         Base64.encodeToString(data, Base64.NO_WRAP)
 
     private fun decode(value: String): ByteArray =
+        // Decodifica Base64 sin saltos.
         Base64.decode(value, Base64.NO_WRAP)
 
     companion object {
+        // Constantes de configuración y claves de preferencias.
         const val DEFAULT_ONE_TIME_PRE_KEY_POOL_SIZE = 20
         const val MIN_ONE_TIME_PRE_KEY_THRESHOLD = 5
 

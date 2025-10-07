@@ -36,6 +36,19 @@ class ChatListAdapter(
         return ChatRoomViewHolder(view)
     }
 
+    override fun onBindViewHolder(
+        holder: ChatRoomViewHolder,
+        position: Int,
+        payloads: MutableList<Any>
+    ) {
+        if (payloads.isNotEmpty() && payloads.all { it == PAYLOAD_PRESENCE }) {
+            val room = getItem(position)
+            bindPresence(holder, room)
+            return
+        }
+        super.onBindViewHolder(holder, position, payloads)
+    }
+
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val room = getItem(position)
         val context = holder.itemView.context
@@ -93,24 +106,34 @@ class ChatListAdapter(
         }
 
         // Estado online SOLO en chats individuales
-        if (room.isGroup) {
-            holder.statusView.visibility = View.GONE
-        } else {
-            holder.statusView.visibility = View.VISIBLE
-            val otherUid = room.participantIds.firstOrNull { it != Firebase.auth.currentUser?.uid }
-            val isOnline = otherUid?.let { presenceByUser[it] == true } ?: false
-            holder.statusView.setBackgroundResource(
-                if (isOnline) R.drawable.online_indicator else R.drawable.offline_indicator
-            )
-        }
+        bindPresence(holder, room)
 
         // Click para abrir el chat
         holder.itemView.setOnClickListener { onClick(room) }
     }
 
     fun updatePresence(map: Map<String, Boolean>) {
+        val previousPresence = presenceByUser
         presenceByUser = map
-        notifyDataSetChanged()
+
+        if (previousPresence == presenceByUser) return
+
+        val currentUid = Firebase.auth.currentUser?.uid ?: return
+
+        val changedUserIds = (previousPresence.keys + presenceByUser.keys)
+            .filter { previousPresence[it] != presenceByUser[it] }
+            .toSet()
+
+        if (changedUserIds.isEmpty()) return
+
+        currentList.forEachIndexed { index, room ->
+            if (!room.isGroup) {
+                val otherUid = room.participantIds.firstOrNull { it != currentUid }
+                if (otherUid != null && changedUserIds.contains(otherUid)) {
+                    notifyItemChanged(index, PAYLOAD_PRESENCE)
+                }
+            }
+        }
     }
 
     companion object {
@@ -121,8 +144,32 @@ class ChatListAdapter(
             }
 
             override fun areContentsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
-                return oldItem == newItem
+                return oldItem.participantIds == newItem.participantIds &&
+                    oldItem.userNames == newItem.userNames &&
+                    oldItem.isGroup == newItem.isGroup &&
+                    oldItem.groupName == newItem.groupName &&
+                    oldItem.lastMessagePreview == newItem.lastMessagePreview &&
+                    oldItem.updatedAt == newItem.updatedAt &&
+                    oldItem.unreadCounts == newItem.unreadCounts &&
+                    oldItem.summaryError == newItem.summaryError &&
+                    oldItem.summaryRequiresResync == newItem.summaryRequiresResync &&
+                    oldItem.photoUrl == newItem.photoUrl
             }
+        }
+
+        private const val PAYLOAD_PRESENCE = "payload_presence"
+    }
+
+    private fun bindPresence(holder: ChatRoomViewHolder, room: ChatRoom) {
+        if (room.isGroup) {
+            holder.statusView.visibility = View.GONE
+        } else {
+            holder.statusView.visibility = View.VISIBLE
+            val otherUid = room.participantIds.firstOrNull { it != Firebase.auth.currentUser?.uid }
+            val isOnline = otherUid?.let { presenceByUser[it] == true } ?: false
+            holder.statusView.setBackgroundResource(
+                if (isOnline) R.drawable.online_indicator else R.drawable.offline_indicator
+            )
         }
     }
 }

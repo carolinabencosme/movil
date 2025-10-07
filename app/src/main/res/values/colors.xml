@@ -1,24 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Dreamy lavender & seafoam palette -->
-    <color name="md_theme_light_primary">#C7AFFF</color>
-    <color name="md_theme_light_onPrimary">#251A3C</color>
-    <color name="md_theme_light_primaryContainer">#3B2C55</color>
-    <color name="md_theme_light_onPrimaryContainer">#F4EDFF</color>
+    <!-- Luxe noir & amethyst palette -->
+    <color name="md_theme_light_primary">#A678FF</color>
+    <color name="md_theme_light_onPrimary">#0F041F</color>
+    <color name="md_theme_light_primaryContainer">#2F1452</color>
+    <color name="md_theme_light_onPrimaryContainer">#F4ECFF</color>
 
-    <color name="md_theme_light_secondary">#89D8C2</color>
-    <color name="md_theme_light_onSecondary">#08241E</color>
-    <color name="md_theme_light_secondaryContainer">#274F45</color>
-    <color name="md_theme_light_onSecondaryContainer">#DAF7EF</color>
+    <color name="md_theme_light_secondary">#7A63FF</color>
+    <color name="md_theme_light_onSecondary">#090315</color>
+    <color name="md_theme_light_secondaryContainer">#251B3E</color>
+    <color name="md_theme_light_onSecondaryContainer">#E4DDFF</color>
 
-    <color name="md_theme_light_tertiary">#F6BCD5</color>
-    <color name="md_theme_light_surface">#141223</color>
-    <color name="md_theme_light_surfaceVariant">#1C1A2C</color>
-    <color name="md_theme_light_surfaceContainer">#201E31</color>
-    <color name="md_theme_light_onSurface">#F6F2FF</color>
-    <color name="md_theme_light_onSurfaceVariant">#CBC6E1</color>
-    <color name="md_theme_light_outline">#3F3A53</color>
-    <color name="md_theme_light_outlineVariant">#2C283D</color>
+    <color name="md_theme_light_tertiary">#C9A5FF</color>
+    <color name="md_theme_light_surface">#05030B</color>
+    <color name="md_theme_light_surfaceVariant">#0D0619</color>
+    <color name="md_theme_light_surfaceContainer">#140C26</color>
+    <color name="md_theme_light_onSurface">#F6F1FF</color>
+    <color name="md_theme_light_onSurfaceVariant">#C5B8E4</color>
+    <color name="md_theme_light_outline">#3F2F5B</color>
+    <color name="md_theme_light_outlineVariant">#271B39</color>
     <color name="md_theme_light_error">#F28B82</color>
     <color name="md_theme_light_warning">#F7C27D</color>
     <color name="md_theme_light_success">#8EE5C2</color>
@@ -26,24 +26,24 @@
     <color name="colorSuccess">#8EE5C2</color>
     <color name="colorWarning">#F7C27D</color>
     <color name="colorError">#F28B82</color>
-    <color name="colorInfo">#8ABFF9</color>
+    <color name="colorInfo">#9FA8FF</color>
 
-    <color name="colorCardStroke">#33C7AFFF</color>
-    <color name="glass_background">#1AE3E1F6</color>
-    <color name="glass_background_elevated">#26E3E1F6</color>
-    <color name="glass_stroke">#40C7AFFF</color>
+    <color name="colorCardStroke">#33A678FF</color>
+    <color name="glass_background">#1AA678FF</color>
+    <color name="glass_background_elevated">#26A678FF</color>
+    <color name="glass_stroke">#40A678FF</color>
 
-    <color name="message_incoming_bg">#2B2539</color>
-    <color name="message_incoming_stroke">#4A4362</color>
-    <color name="message_outgoing_start">#BFA8FF</color>
-    <color name="message_outgoing_end">#9F8BEB</color>
+    <color name="message_incoming_bg">#181026</color>
+    <color name="message_incoming_stroke">#30214A</color>
+    <color name="message_outgoing_start">#B88BFF</color>
+    <color name="message_outgoing_end">#8F5CFF</color>
 
-    <color name="text_primary">#F6F2FF</color>
-    <color name="text_secondary">#CBC6E1</color>
-    <color name="text_muted">#A19DBD</color>
+    <color name="text_primary">#F6F1FF</color>
+    <color name="text_secondary">#C5B8E4</color>
+    <color name="text_muted">#9285B5</color>
 
-    <color name="bottom_nav_active">#C7AFFF</color>
-    <color name="bottom_nav_inactive">#7E799B</color>
+    <color name="bottom_nav_active">#A678FF</color>
+    <color name="bottom_nav_inactive">#5C5476</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.*
 import android.widget.CheckBox
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -58,7 +59,8 @@ class ChatListFragment : Fragment() {
 
         val currentUser = Firebase.auth.currentUser ?: return // 👈 evita crash si ya está null
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
+        val activity = requireActivity() as AppCompatActivity
+        activity.setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
             if (room.isGroup) {

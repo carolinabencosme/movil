@@ -12,7 +12,7 @@
         style="@style/AppToolbar"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        app:title="@string/app_name"
+        app:title=""
         app:titleCentered="true"
         app:navigationIconTint="@color/md_theme_light_primary"
         app:layout_constraintTop_toTopOf="parent"

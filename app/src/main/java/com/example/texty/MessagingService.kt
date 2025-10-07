@@ -36,10 +36,14 @@ class MessagingService : FirebaseMessagingService() {
     val roomId = data["roomId"] ?: data["chatId"]
     val messageId = data["messageId"]
 
-    val title = data["senderName"]
-      ?: message.notification?.title
+    val senderName = data["senderName"]?.takeIf { it.isNotBlank() }
+    val fallbackTitle = message.notification?.title?.takeIf { !it.isNullOrBlank() }
+    val title = senderName
+      ?: data["senderId"]?.takeIf { it.isNotBlank() }
+      ?: fallbackTitle
       ?: getString(R.string.notification_generic_title)
-    val defaultBody = getString(R.string.notification_generic_body)
+    val defaultBody = data["body"]?.takeIf { it.isNotBlank() }
+      ?: getString(R.string.notification_generic_body)
 
     // Si no podemos publicar notificaciones, salimos silenciosamente
     if (!canPostNotifications()) return

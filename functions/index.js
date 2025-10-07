@@ -12,6 +12,47 @@ function chunk(arr, n = 500) {
     return out;
 }
 
+/**
+ * Obtiene un nombre visible para el remitente.
+ * Primero intenta usar el nombre incluido en el mensaje y, si está vacío,
+ * consulta el perfil del usuario en Firestore para reutilizar su displayName.
+ */
+async function resolveSenderName(msg) {
+    const raw = typeof msg?.senderName === 'string' ? msg.senderName.trim() : '';
+    if (raw) return raw;
+
+    const senderId = typeof msg?.senderId === 'string' ? msg.senderId.trim() : '';
+    if (!senderId) return '';
+
+    try {
+        const snap = await admin.firestore().collection('users').doc(senderId).get();
+        const profileName = typeof snap.get('displayName') === 'string'
+            ? snap.get('displayName').trim()
+            : '';
+        if (profileName) return profileName;
+    } catch (error) {
+        console.warn('resolveSenderName error', {
+            senderId,
+            error: error?.message || error,
+        });
+    }
+
+    return senderId;
+}
+
+/** Define un cuerpo simple dependiendo del tipo de mensaje recibido. */
+function resolveNotificationBody(msg) {
+    const preview = typeof msg?.preview === 'string' ? msg.preview.trim() : '';
+    if (preview) return preview;
+
+    const messageType = typeof msg?.messageType === 'string' ? msg.messageType : '';
+    if (messageType.startsWith('media/')) {
+        if (messageType === 'media/image') return 'Te envió una imagen';
+        return 'Te envió un archivo adjunto';
+    }
+    return 'Tienes un mensaje nuevo';
+}
+
 /** Lee participantIds del room. Si no existe, intenta deducirlos del roomId o del mensaje. */
 async function getParticipants(roomId, msg) {
     const ref = admin.firestore().collection('rooms').doc(roomId);
@@ -71,6 +112,8 @@ exports.sendMessageNotification = functions.firestore
         const roomId = context.params.roomId;
         const messageId = context.params.messageId;
 
+        const senderName = await resolveSenderName(msg);
+
         // 1) Participantes y destinatarios (excluye remitente)
         const participants = await getParticipants(roomId, msg);
         const recipients = participants.filter((uid) => uid && uid !== msg.senderId);
@@ -87,8 +130,8 @@ exports.sendMessageNotification = functions.firestore
         if (!tokens.length) return null;
 
         // 3) Payload
-        const title = msg.senderName || 'Nuevo mensaje';
-        const body = 'Tienes un mensaje nuevo';
+        const title = senderName || 'Nuevo mensaje';
+        const body = resolveNotificationBody(msg);
 
         const common = {
             notification: { title, body },
@@ -97,7 +140,7 @@ exports.sendMessageNotification = functions.firestore
                 roomId: roomId || '',
                 messageId: messageId || '',
                 senderId: msg.senderId || '',
-                senderName: msg.senderName || '',
+                senderName: senderName || '',
                 body,
             },
             android: { priority: 'high' },

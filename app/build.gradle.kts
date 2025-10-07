@@ -56,6 +56,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.8.6")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.6")
+    implementation("androidx.lifecycle:lifecycle-process:2.8.6")
 
     // Firebase (BOM)
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
@@ -68,6 +69,7 @@ dependencies {
 
     // Glide (carga de imágenes)
     implementation("com.github.bumptech.glide:glide:4.16.0")
+    implementation("androidx.activity:activity:1.9.2")
     kapt("com.github.bumptech.glide:compiler:4.16.0")
 
     // Cryptography
@@ -88,8 +90,11 @@ dependencies {
     androidTestImplementation("io.mockk:mockk-android:1.13.8")
 
     // Compose (si lo usas)
-    implementation("com.google.android.material:material:1.12.0")
+    //implementation("com.google.android.material:material:1.12.0")
     implementation("androidx.compose.material3:material3:1.3.2")
     implementation("androidx.compose.material3:material3-window-size-class:1.3.2")
     implementation("androidx.compose.material3:material3-adaptive-navigation-suite:1.5.0-alpha04")
+
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
 }

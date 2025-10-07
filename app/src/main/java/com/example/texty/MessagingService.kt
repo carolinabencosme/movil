@@ -20,23 +20,30 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 
+// Maneja tokens FCM y muestra notificaciones.
 class MessagingService : FirebaseMessagingService() {
 
   companion object {
+    // Identificadores para notificaciones y logs.
     private const val CHANNEL_ID = "messages"
     private const val TAG = "MessagingService"
   }
 
   override fun onMessageReceived(message: RemoteMessage) {
+    // Gestiona cada mensaje entrante y genera la notificación.
     // --- Datos que pueden venir en el payload de data (desde la Cloud Function) ---
     val data = message.data
     val roomId = data["roomId"] ?: data["chatId"]
     val messageId = data["messageId"]
 
-    val title = data["senderName"]
-      ?: message.notification?.title
+    val senderName = data["senderName"]?.takeIf { it.isNotBlank() }
+    val fallbackTitle = message.notification?.title?.takeIf { !it.isNullOrBlank() }
+    val title = senderName
+      ?: data["senderId"]?.takeIf { it.isNotBlank() }
+      ?: fallbackTitle
       ?: getString(R.string.notification_generic_title)
-    val defaultBody = getString(R.string.notification_generic_body)
+    val defaultBody = data["body"]?.takeIf { it.isNotBlank() }
+      ?: getString(R.string.notification_generic_body)
 
     // Si no podemos publicar notificaciones, salimos silenciosamente
     if (!canPostNotifications()) return
@@ -84,6 +91,7 @@ class MessagingService : FirebaseMessagingService() {
     val notification = builder.build()
 
     val notifyId = roomId?.hashCode() ?: messageId?.hashCode() ?: System.currentTimeMillis().toInt()
+    // Publica la notificación manejando posibles restricciones.
     try {
       NotificationManagerCompat.from(this).notify(notifyId, notification)
     } catch (se: SecurityException) {
@@ -95,7 +103,7 @@ class MessagingService : FirebaseMessagingService() {
     super.onNewToken(token)
     val currentUser = Firebase.auth.currentUser ?: return
 
-    // Guardamos como ARRAY por si el usuario usa múltiples dispositivos
+    // Guarda el token para permitir notificaciones en múltiples dispositivos.
     Firebase.firestore.collection("users")
       .document(currentUser.uid)
       .set(
@@ -110,6 +118,7 @@ class MessagingService : FirebaseMessagingService() {
   // --- Helpers ---
 
   private fun canPostNotifications(): Boolean {
+    // Verifica permiso y habilitación del canal.
     // Android 13+ requiere POST_NOTIFICATIONS
     if (Build.VERSION.SDK_INT >= 33) {
       val granted = checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) ==
@@ -121,6 +130,7 @@ class MessagingService : FirebaseMessagingService() {
   }
 
   private fun createChannelIfNeeded() {
+    // Define el canal de mensajes en Android O+.
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
       val existing = manager.getNotificationChannel(CHANNEL_ID)

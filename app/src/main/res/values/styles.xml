@@ -1,47 +1,147 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <!-- Text field base style -->
-    <style name="AppEditText" parent="Widget.AppCompat.EditText">
-        <item name="android:layout_width">match_parent</item>
-        <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <item name="android:backgroundTint">?attr/colorSurfaceVariant</item>
-        <item name="android:textColor">?attr/colorOnSurface</item>
-        <item name="android:textColorHint">?attr/colorTertiary</item>
+    <style name="AppToolbar" parent="Widget.Material3.Toolbar">
+        <item name="android:background">@drawable/bg_toolbar_glass</item>
+        <item name="titleTextColor">@color/text_primary</item>
+        <item name="subtitleTextColor">@color/text_secondary</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:popupTheme">@style/ThemeOverlay.Material3.Dark</item>
+        <item name="android:elevation">0dp</item>
+        <item name="navigationIconTint">@color/chat_secondary_accent</item>
+        <item name="titleCentered">true</item>
     </style>
 
-    <!-- Material 3 Buttons -->
+    <style name="AppToolbar.Surface" parent="AppToolbar">
+        <item name="android:background">@drawable/bg_toolbar_glass</item>
+        <item name="titleTextColor">@color/text_primary</item>
+        <item name="subtitleTextColor">@color/text_secondary</item>
+        <item name="navigationIconTint">@color/chat_secondary_accent</item>
+    </style>
+
     <style name="AppButton" parent="Widget.Material3.Button">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <!-- Use the theme token for M3 shape -->
-        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
+        <item name="android:layout_marginTop">20dp</item>
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="android:textColor">@color/md_theme_light_onPrimary</item>
+        <item name="android:background">@drawable/bg_gold_button</item>
+        <item name="rippleColor">@color/md_theme_light_primaryContainer</item>
+        <item name="iconTint">@color/md_theme_light_onPrimary</item>
     </style>
 
     <style name="AppButton.Tonal" parent="Widget.Material3.Button.TonalButton">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="backgroundTint">@color/glass_background_elevated</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="iconTint">@color/chat_secondary_accent</item>
     </style>
 
     <style name="AppButton.Outlined" parent="Widget.Material3.Button.OutlinedButton">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_marginTop">16dp</item>
-        <item name="android:padding">16dp</item>
-        <item name="shapeAppearance">?attr/shapeAppearanceMediumComponent</item>
+        <item name="android:paddingTop">14dp</item>
+        <item name="android:paddingBottom">14dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">0.05</item>
+        <item name="strokeColor">@color/chat_secondary_accent</item>
+        <item name="android:textColor">@color/chat_secondary_accent</item>
+        <item name="iconTint">@color/chat_secondary_accent</item>
+        <item name="backgroundTint">@android:color/transparent</item>
     </style>
 
-    <!-- Toolbar -->
-    <style name="AppToolbar" parent="Widget.Material3.Toolbar" />
+    <style name="AppButton.Icon" parent="Widget.Material3.Button.Icon">
+        <item name="android:padding">12dp</item>
+        <item name="android:layout_marginStart">0dp</item>
+        <item name="android:layout_marginEnd">8dp</item>
+        <item name="backgroundTint">@color/glass_background_elevated</item>
+        <item name="shapeAppearance">?attr/shapeAppearanceLargeComponent</item>
+        <item name="iconTint">@color/chat_secondary_accent</item>
+        <item name="rippleColor">@color/chat_surface_overlay</item>
+    </style>
 
-    <!-- Punto base -->
+    <style name="Widget.Texty.SendButton" parent="Widget.MaterialComponents.Button">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:paddingHorizontal">18dp</item>
+        <item name="android:paddingVertical">10dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/md_theme_light_onPrimary</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:background">@drawable/bg_gold_button</item>
+        <item name="iconPadding">8dp</item>
+        <item name="iconGravity">textStart</item>
+        <item name="iconTint">@color/md_theme_light_onPrimary</item>
+        <item name="rippleColor">@color/md_theme_light_primaryContainer</item>
+    </style>
+
+    <style name="Theme.Texty.NoActionBar.FullScreen" parent="Theme.Material3.Dark.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    </style>
+
+    <style name="Widget.Texty.TextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">16dp</item>
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="boxStrokeWidthFocused">2dp</item>
+        <item name="boxStrokeColor">@color/text_input_stroke</item>
+        <item name="boxStrokeErrorColor">@color/colorError</item>
+        <item name="boxBackgroundColor">@color/glass_background_elevated</item>
+        <item name="hintTextColor">@color/text_input_hint</item>
+        <item name="startIconTint">@color/text_input_icon</item>
+        <item name="endIconTint">@color/text_input_icon</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.Material3.Corner.Medium</item>
+    </style>
+
+    <style name="Widget.Texty.TextInputEditText" parent="Widget.Material3.TextInputEditText.OutlinedBox">
+        <item name="android:paddingTop">16dp</item>
+        <item name="android:paddingBottom">16dp</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textColorHint">@color/text_input_hint</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:textSize">16sp</item>
+    </style>
+
+    <style name="Widget.Texty.IconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
+        <item name="android:paddingRight">0dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="backgroundTint">@color/glass_background_elevated</item>
+        <item name="iconTint">@color/chat_secondary_accent</item>
+        <item name="rippleColor">@color/chat_surface_overlay</item>
+    </style>
+
+    <style name="TextAppearance.Texty.Headline" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:fontFamily">@font/inter_semibold</item>
+        <item name="android:letterSpacing">0.02</item>
+    </style>
+
+    <style name="TextAppearance.Texty.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:fontFamily">@font/inter_medium</item>
+        <item name="android:letterSpacing">0.01</item>
+        <item name="android:lineSpacingExtra">2dp</item>
+    </style>
+
     <style name="StateDot">
         <item name="android:layout_width">8dp</item>
         <item name="android:layout_height">8dp</item>
@@ -49,15 +149,14 @@
         <item name="android:layout_marginEnd">6dp</item>
     </style>
 
-    <!-- Variante de error (la que te falta) -->
     <style name="StateDot.Error" parent="StateDot">
         <item name="android:background">@drawable/state_dot_error</item>
     </style>
 
-    <!-- (Opcional, por si el layout usa otras variantes) -->
     <style name="StateDot.Online" parent="StateDot">
         <item name="android:background">@drawable/state_dot_online</item>
     </style>
+
     <style name="StateDot.Offline" parent="StateDot">
         <item name="android:background">@drawable/state_dot_offline</item>
     </style>

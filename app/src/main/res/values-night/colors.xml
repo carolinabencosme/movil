@@ -1,18 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="md_theme_light_primary">#6366F1</color>
-    <color name="md_theme_light_secondary">#22D3EE</color>
-    <color name="md_theme_light_tertiary">#FF6B6B</color>
-    <color name="md_theme_light_surface">#111827</color>
-    <color name="md_theme_light_surfaceVariant">#1E293B</color>
-    <color name="md_theme_light_onSurface">#F1F5F9</color>
-    <color name="md_theme_light_onSurfaceVariant">#9CA3AF</color>
-    <color name="md_theme_light_error">#EF4444</color>
-    <color name="md_theme_light_warning">#F59E0B</color>
-    <color name="md_theme_light_success">#22C55E</color>
-    <color name="md_theme_light_onPrimary">#FFFFFF</color>
-    <color name="colorSuccess">#22C55E</color>
-    <color name="colorWarning">#F59E0B</color>
-    <color name="colorError">#EF4444</color>
-    <color name="colorInfo">#60A5FA</color>
+    <color name="md_theme_light_primary">#F47C4C</color>
+    <color name="md_theme_light_onPrimary">#F2F3F5</color>
+    <color name="md_theme_light_primaryContainer">#33F47C4C</color>
+    <color name="md_theme_light_onPrimaryContainer">#F2F3F5</color>
+
+    <color name="md_theme_light_secondary">#5AB8FF</color>
+    <color name="md_theme_light_onSecondary">#0E1625</color>
+    <color name="md_theme_light_secondaryContainer">#1F3246</color>
+    <color name="md_theme_light_onSecondaryContainer">#C7E5FF</color>
+
+    <color name="md_theme_light_tertiary">#FFD195</color>
+    <color name="md_theme_light_surface">#0E1625</color>
+    <color name="md_theme_light_surfaceVariant">#162A40</color>
+    <color name="md_theme_light_surfaceContainer">#1A314C</color>
+    <color name="md_theme_light_onSurface">#F2F3F5</color>
+    <color name="md_theme_light_onSurfaceVariant">#B0B4BA</color>
+    <color name="md_theme_light_outline">#2D3C52</color>
+    <color name="md_theme_light_outlineVariant">#1C293A</color>
+    <color name="md_theme_light_error">#FF7A7A</color>
+    <color name="md_theme_light_warning">#F2B872</color>
+    <color name="md_theme_light_success">#7CD8A7</color>
+
+    <color name="colorSuccess">#7CD8A7</color>
+    <color name="colorWarning">#F2B872</color>
+    <color name="colorError">#FF7A7A</color>
+    <color name="colorInfo">#5AB8FF</color>
+
+    <color name="colorCardStroke">#29F2F3F5</color>
 </resources>

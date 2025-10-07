@@ -1,39 +1,56 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/messageRoot"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="8dp"
-    android:gravity="start">
+              android:id="@+id/messageRoot"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:animateLayoutChanges="true"
+              android:gravity="start"
+              android:orientation="vertical"
+              android:paddingHorizontal="8dp"
+              android:paddingVertical="6dp">
 
-    <TextView
-        android:id="@+id/textMessage"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:padding="8dp"
-        android:textColor="@android:color/black"
-        android:background="@drawable/bubble_incoming"
-        android:foreground="?attr/selectableItemBackgroundBorderless" />
+    <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/textSender"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:layout_marginBottom="2dp"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:fontFamily="@font/inter_semibold"
+            android:textStyle="bold"
+            android:textColor="@color/chat_secondary_accent"
+            android:visibility="gone" />
 
-    <ImageView
-            android:id="@+id/imageMessage"
-            android:layout_width="200dp"
-            android:layout_height="200dp"
-            android:scaleType="centerCrop"
-            android:adjustViewBounds="true"
-            android:layout_marginTop="4dp"
-            android:visibility="gone"
+    <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/textMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="280dp"
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+            android:fontFamily="@font/inter_medium"
+            android:textColor="@color/text_primary"
             android:background="@drawable/bubble_incoming"
             android:foreground="?attr/selectableItemBackgroundBorderless" />
 
+    <ImageView
+            android:id="@+id/imageMessage"
+            android:layout_width="220dp"
+            android:layout_height="220dp"
+            android:layout_marginTop="6dp"
+            android:adjustViewBounds="true"
+            android:background="@drawable/bubble_incoming"
+            android:foreground="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@null"
+            android:scaleType="centerCrop"
+            android:visibility="gone" />
 
-    <TextView
-        android:id="@+id/textTime"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="4dp"
-        android:textColor="@android:color/darker_gray"
-        android:textSize="12sp" />
+    <com.google.android.material.textview.MaterialTextView
+            android:id="@+id/textTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:fontFamily="@font/inter_medium"
+            android:textColor="@color/chat_hint_text" />
 
 </LinearLayout>

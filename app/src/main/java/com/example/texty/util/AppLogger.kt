@@ -10,12 +10,14 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Centraliza el guardado y compartido de logs locales.
 object AppLogger {
     private const val TAG = "AppLogger"
     private const val MAX_LOG_FILES = 20
     private const val MAX_LOG_STORAGE_BYTES = 20L * 1024 * 1024 // 20 MB
 
     fun logError(context: Context, throwable: Throwable) {
+        // Guarda la traza y controla el almacenamiento.
         try {
             val logsDir = File(context.filesDir, "logs").apply { mkdirs() }
             val timestamp = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
@@ -38,26 +40,31 @@ object AppLogger {
     }
 
     fun logInfo(tag: String, message: String, context: Context? = null) {
+        // Registra información con persistencia opcional.
         Log.i(tag, message)
         context?.let { appendLog(it, "INFO", tag, message) }
     }
 
     fun logDebug(tag: String, message: String, context: Context? = null) {
+        // Registra mensajes de depuración.
         Log.d(tag, message)
         context?.let { appendLog(it, "DEBUG", tag, message) }
     }
 
     fun logWarn(tag: String, message: String, context: Context? = null) {
+        // Registra advertencias persistentes.
         Log.w(tag, message)
         context?.let { appendLog(it, "WARN", tag, message) }
     }
 
     fun logVerbose(tag: String, message: String, context: Context? = null) {
+        // Registra trazas detalladas.
         Log.v(tag, message)
         context?.let { appendLog(it, "VERBOSE", tag, message) }
     }
 
     fun shareLogs(context: Context) {
+        // Lanza un intent para compartir archivos de log.
         try {
             val logsDir = File(context.filesDir, "logs")
             val files = logsDir.listFiles { file -> file.extension == "log" } ?: emptyArray()
@@ -88,6 +95,7 @@ object AppLogger {
     }
 
     private fun appendLog(context: Context, level: String, tag: String, message: String) {
+        // Agrega la línea al archivo de log diario.
         try {
             val logsDir = File(context.filesDir, "logs").apply { mkdirs() }
             val timestamp = SimpleDateFormat("yyyyMMdd", Locale.US).format(Date())

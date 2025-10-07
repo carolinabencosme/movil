@@ -17,13 +17,30 @@ import java.text.DateFormat
 
 /**
  * Adaptador que muestra tarjetas de salas en la lista principal de chats.
+ * Adaptador para la lista de conversaciones (rooms) del chat.
+ * Soporta:
+ * - Avatares (cargados con Glide)
+ * - Preview del último mensaje con manejo de resincronización
+ * - Contador de no leídos por usuario
+ * - Formateo de hora de última actualización
+ * - Indicador de presencia (online/offline) en chats individuales, con payloads parciales
+ *
+ * Usa DiffUtil para actualizaciones eficientes y payloads para evitar rebind completo
+ * cuando solo cambia el estado de presencia.
+ *
+ * @param onClick Callback invocado al tocar un ítem; recibe el [ChatRoom] seleccionado.
  */
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
 ) : ListAdapter<ChatRoom, ChatListAdapter.ChatRoomViewHolder>(DIFF_CALLBACK) {
 
+    // Mapa local con el estado de presencia por userId. Se actualiza vía updatePresence().
     private var presenceByUser = emptyMap<String, Boolean>()
 
+    /**
+     * ViewHolder de un room de chat.
+     * Mantiene referencias a vistas típicas del ítem de lista.
+     */
     class ChatRoomViewHolder(view: View) : RecyclerView.ViewHolder(view) {
         val avatar: ImageView = view.findViewById(R.id.imageAvatar) // NUEVO
         val nameText: TextView = view.findViewById(R.id.textName)
@@ -32,13 +49,27 @@ class ChatListAdapter(
         val unreadCountText: TextView = view.findViewById(R.id.textUnreadCount)
         val lastUpdatedText: TextView = view.findViewById(R.id.textLastUpdated)
     }
-
+    /**
+     * Infla el layout base del ítem de chat y crea un [ChatRoomViewHolder].
+     *
+     * @param parent ViewGroup padre.
+     * @param viewType Tipo de vista (único en este adaptador).
+     * @return Nuevo [ChatRoomViewHolder] listo para bind.
+     */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ChatRoomViewHolder {
         val view = LayoutInflater.from(parent.context)
             .inflate(R.layout.item_chat, parent, false)
         return ChatRoomViewHolder(view)
     }
-
+    /**
+     * Variante de bind con payloads. Si el payload indica solo presencia ([PAYLOAD_PRESENCE]),
+     * actualiza exclusivamente el indicador online/offline sin rehacer el bind completo.
+     *
+     * @param holder ViewHolder a actualizar.
+     * @param position Posición del ítem.
+     * @param payloads Lista de payloads de cambio. Si contiene únicamente [PAYLOAD_PRESENCE],
+     * se invoca [bindPresence] y se retorna.
+     */
     override fun onBindViewHolder(
         holder: ChatRoomViewHolder,
         position: Int,
@@ -51,7 +82,19 @@ class ChatListAdapter(
         }
         super.onBindViewHolder(holder, position, payloads)
     }
-
+    /**
+     * Bind completo del ítem de chat:
+     * - Resuelve nombre (grupo o 1-1).
+     * - Carga avatar con Glide (placeholder + error).
+     * - Muestra preview del último mensaje (manejo de resincronización y visibilidad).
+     * - Muestra/oculta contador de no leídos.
+     * - Formatea y muestra hora de última actualización.
+     * - Aplica indicador de presencia (solo en 1-1).
+     * - Configura el clic del ítem.
+     *
+     * @param holder ViewHolder a actualizar.
+     * @param position Posición del ítem.
+     */
     override fun onBindViewHolder(holder: ChatRoomViewHolder, position: Int) {
         val room = getItem(position)
         val context = holder.itemView.context
@@ -77,7 +120,7 @@ class ChatListAdapter(
         // **Preview**:
         // - Si requiere resincronizar: mostramos el aviso.
         // - Si no hay preview (primer chat): ocultamos el TextView (queda vacío).
-        // - Si hay preview: lo mostramos tal cual (ya mapeaste "Imagen" desde el ViewModel).
+        // - Si hay preview: lo mostramos tal cual (ya mapeo "Imagen" desde el ViewModel).
         when {
             room.summaryRequiresResync -> {
                 holder.lastMessageText.text = context.getString(R.string.chat_message_unavailable_resync)
@@ -114,7 +157,12 @@ class ChatListAdapter(
         // Click para abrir el chat
         holder.itemView.setOnClickListener { onClick(room) }
     }
-
+    /**
+     * Actualiza el mapa de presencia y notifica, mediante payloads parciales, únicamente
+     * los ítems afectados (chats 1-1 cuyo "otro" usuario cambió de estado).
+     *
+     * @param map Mapa userId -> online?.
+     */
     fun updatePresence(map: Map<String, Boolean>) {
         val previousPresence = presenceByUser
         presenceByUser = map
@@ -140,12 +188,25 @@ class ChatListAdapter(
     }
 
     companion object {
+        // Formateador de hora corta (locale-aware)
         private val timeFormatter = DateFormat.getTimeInstance(DateFormat.SHORT)
+
+        /**
+         * DiffUtil para comparar items y contenidos de ChatRoom.
+         * - areItemsTheSame: compara identidad por id.
+         * - areContentsTheSame: compara campos relevantes que afectan la UI.
+         */
         private val DIFF_CALLBACK = object : DiffUtil.ItemCallback<ChatRoom>() {
             override fun areItemsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
                 return oldItem.id == newItem.id
             }
-
+            /**
+             * Determina si dos ChatRoom representan el mismo ítem (misma identidad).
+             *
+             * @param oldItem Ítem anterior.
+             * @param newItem Ítem nuevo.
+             * @return true si comparten el mismo id; false en caso contrario.
+             */
             override fun areContentsTheSame(oldItem: ChatRoom, newItem: ChatRoom): Boolean {
                 return oldItem.participantIds == newItem.participantIds &&
                     oldItem.userNames == newItem.userNames &&
@@ -160,9 +221,18 @@ class ChatListAdapter(
             }
         }
 
+        // Payload para notificar cambios de presencia sin rebinder todo.
         private const val PAYLOAD_PRESENCE = "payload_presence"
     }
-
+    /**
+     * Enlaza el estado de presencia para el ítem:
+     * - Si es grupo: oculta el indicador.
+     * - Si es 1-1: muestra el indicador y cambia el background según online/offline
+     *   utilizando [presenceByUser] y el "otro" uid del room.
+     *
+     * @param holder ViewHolder objetivo.
+     * @param room ChatRoom asociado.
+     */
     private fun bindPresence(holder: ChatRoomViewHolder, room: ChatRoom) {
         if (room.isGroup) {
             holder.statusView.visibility = View.GONE

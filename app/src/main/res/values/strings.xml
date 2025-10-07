@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Texty</string>
+    <string name="app_name">ClassyChat</string>
     <string name="invalid_email">Email inválido</string>
     <string name="invalid_password">La contraseña debe tener al menos 6 caracteres</string>
     <string name="error_generic">Error</string>
@@ -60,7 +60,7 @@
     <string name="chat_banner_message_sent">Mensaje enviado</string>
     <string name="chat_banner_preview_with_time">%1$s · %2$s</string>
     <string name="chat_add_image">Adjuntar imagen</string>
-    <string name="chat_message_hint">Escribe un mensaje</string>
+    <string name="chat_message_hint">Escribe un mensaje elegante…</string>
     <string name="chat_action_send">Enviar</string>
     <string name="chat_group_default_name">Grupo sin nombre</string>
     <string name="chat_add_members_action">Agregar miembros</string>

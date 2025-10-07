@@ -18,7 +18,7 @@
             android:layout_marginBottom="2dp"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textStyle="bold"
-            android:textColor="?attr/colorPrimary"
+            android:textColor="@color/md_theme_light_primary"
             android:visibility="gone" />
 
     <com.google.android.material.textview.MaterialTextView
@@ -27,7 +27,7 @@
             android:layout_height="wrap_content"
             android:maxWidth="280dp"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="@color/text_primary"
             android:background="@drawable/bubble_incoming"
             android:foreground="?attr/selectableItemBackgroundBorderless" />
 
@@ -49,6 +49,6 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
+            android:textColor="@color/text_muted" />
 
 </LinearLayout>

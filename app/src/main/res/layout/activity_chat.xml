@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:animateLayoutChanges="true"
-    android:background="@color/md_theme_light_surfaceContainer"
+    android:background="@android:color/transparent"
     android:fitsSystemWindows="true">
 
     <com.google.android.material.appbar.AppBarLayout
@@ -16,7 +16,10 @@
             android:id="@+id/topAppBar"
             style="@style/AppToolbar"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:paddingStart="20dp"
+            android:paddingEnd="20dp"
+            app:titleCentered="true" />
     </com.google.android.material.appbar.AppBarLayout>
 
     <com.google.android.material.card.MaterialCardView
@@ -28,10 +31,10 @@
         android:layout_marginBottom="4dp"
         android:animateLayoutChanges="true"
         android:visibility="gone"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="20dp"
+        app:cardBackgroundColor="@color/glass_background_elevated"
+        app:cardCornerRadius="28dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/colorCardStroke"
+        app:strokeColor="@color/glass_stroke"
         app:strokeWidth="1dp">
 
         <LinearLayout
@@ -66,7 +69,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                    android:textColor="?attr/colorOnSurface" />
+                    android:textColor="@color/text_primary" />
 
                 <com.google.android.material.textview.MaterialTextView
                     android:id="@+id/messageBannerSubtitle"
@@ -75,7 +78,7 @@
                     android:ellipsize="end"
                     android:maxLines="1"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="@color/text_secondary" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
@@ -89,7 +92,8 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp"
         android:paddingTop="8dp"
-        android:paddingBottom="8dp" />
+        android:paddingBottom="8dp"
+        android:layoutAnimation="@anim/layout_fade_through" />
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/composerCard"
@@ -98,10 +102,10 @@
         android:layout_marginHorizontal="12dp"
         android:layout_marginBottom="16dp"
         android:animateLayoutChanges="true"
-        app:cardBackgroundColor="?attr/colorSurface"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="4dp"
-        app:strokeColor="@color/colorCardStroke"
+        app:cardBackgroundColor="@color/glass_background_elevated"
+        app:cardCornerRadius="32dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/glass_stroke"
         app:strokeWidth="1dp">
 
         <androidx.constraintlayout.widget.ConstraintLayout
@@ -120,7 +124,7 @@
                 android:layout_height="48dp"
                 app:icon="@drawable/baseline_add_photo_alternate_24"
                 app:iconSize="20dp"
-                app:iconTint="?attr/colorOnSurfaceVariant"
+                app:iconTint="@color/text_secondary"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />

@@ -15,6 +15,7 @@
                 android:type="radial"
                 android:centerX="30%"
                 android:centerY="20%"
+                android:gradientRadius="260dp"
                 android:startColor="#335AB8FF"
                 android:endColor="#00336699" />
         </shape>
@@ -26,6 +27,7 @@
                 android:type="radial"
                 android:centerX="80%"
                 android:centerY="70%"
+                android:gradientRadius="210dp"
                 android:startColor="#33F47C4C"
                 android:endColor="#00231F1C" />
         </shape>

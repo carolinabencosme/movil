@@ -4,24 +4,28 @@
     style="?attr/materialCardViewStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginBottom="12dp"
+    android:layout_marginBottom="14dp"
     android:foreground="?attr/selectableItemBackground"
-    app:cardBackgroundColor="?attr/colorSurface"
-    app:cardCornerRadius="24dp"
+    android:stateListAnimator="@null"
+    app:cardBackgroundColor="@color/glass_background_elevated"
+    app:cardCornerRadius="20dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/colorCardStroke"
+    app:strokeColor="@color/glass_stroke"
     app:strokeWidth="1dp">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        android:padding="16dp">
+        android:gravity="center_vertical"
+        android:padding="18dp">
 
         <FrameLayout
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:layout_marginEnd="16dp">
+            android:layout_width="56dp"
+            android:layout_height="56dp"
+            android:layout_marginEnd="18dp"
+            android:background="@drawable/bg_avatar_halo"
+            android:padding="3dp">
 
             <com.google.android.material.imageview.ShapeableImageView
                 android:id="@+id/imageAvatar"
@@ -48,8 +52,10 @@
                 android:id="@+id/textName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                style="@style/TextAppearance.Material3.TitleMedium"
-                android:textColor="?attr/colorOnSurface" />
+                android:fontFamily="@font/inter_semibold"
+                android:textColor="@color/text_primary"
+                android:letterSpacing="0.02"
+                android:textSize="18sp" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textLastMessage"
@@ -57,8 +63,9 @@
                 android:layout_height="wrap_content"
                 android:ellipsize="end"
                 android:maxLines="1"
+                android:fontFamily="@font/inter_medium"
                 android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textColor="@color/text_secondary"
                 android:visibility="gone" />
         </LinearLayout>
 
@@ -76,7 +83,8 @@
                 android:layout_height="wrap_content"
                 android:gravity="end"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                android:textColor="?attr/colorOnSurfaceVariant"
+                android:fontFamily="@font/inter_medium"
+                android:textColor="@color/chat_timestamp"
                 android:visibility="gone" />
 
             <com.google.android.material.textview.MaterialTextView
@@ -84,14 +92,15 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:background="@drawable/unread_badge"
                 android:gravity="center"
                 android:minHeight="24dp"
                 android:minWidth="24dp"
-                android:paddingHorizontal="8dp"
-                android:textColor="@android:color/white"
+                android:paddingHorizontal="10dp"
+                android:textColor="@color/text_primary"
                 android:textStyle="bold"
+                android:fontFamily="@font/inter_semibold"
                 android:visibility="gone" />
         </LinearLayout>
     </LinearLayout>

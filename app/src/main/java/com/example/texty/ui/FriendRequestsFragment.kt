@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
+import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -35,7 +36,8 @@ class FriendRequestsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
-        (requireActivity() as androidx.appcompat.app.AppCompatActivity).setSupportActionBar(toolbar)
+        val activity = requireActivity() as AppCompatActivity
+        activity.setSupportActionBar(toolbar)
 
         adapter = FriendRequestAdapter(
             onAccept = { request -> accept(request) },

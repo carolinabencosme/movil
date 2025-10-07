@@ -1,58 +1,60 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Luxe noir & amethyst palette -->
-    <color name="md_theme_light_primary">#1ED760</color>
-    <color name="md_theme_light_onPrimary">#00180D</color>
-    <color name="md_theme_light_primaryContainer">#0C2B1B</color>
-    <color name="md_theme_light_onPrimaryContainer">#CBFFE4</color>
+    <!-- Aurora Chat premium palette -->
+    <color name="md_theme_light_primary">#F47C4C</color>
+    <color name="md_theme_light_onPrimary">#F2F3F5</color>
+    <color name="md_theme_light_primaryContainer">#33F47C4C</color>
+    <color name="md_theme_light_onPrimaryContainer">#F2F3F5</color>
 
-    <color name="md_theme_light_secondary">#17A452</color>
-    <color name="md_theme_light_onSecondary">#00170B</color>
-    <color name="md_theme_light_secondaryContainer">#0F3C23</color>
-    <color name="md_theme_light_onSecondaryContainer">#B0F7C9</color>
+    <color name="md_theme_light_secondary">#5AB8FF</color>
+    <color name="md_theme_light_onSecondary">#0E1625</color>
+    <color name="md_theme_light_secondaryContainer">#1F3246</color>
+    <color name="md_theme_light_onSecondaryContainer">#C7E5FF</color>
 
-    <color name="md_theme_light_tertiary">#18E27A</color>
-    <color name="md_theme_light_surface">#050505</color>
-    <color name="md_theme_light_surfaceVariant">#0B1F16</color>
-    <color name="md_theme_light_surfaceContainer">#0F241A</color>
-    <color name="md_theme_light_onSurface">#F1FFF8</color>
-    <color name="md_theme_light_onSurfaceVariant">#A7D7BA</color>
-    <color name="md_theme_light_outline">#1F6F3F</color>
-    <color name="md_theme_light_outlineVariant">#114427</color>
-    <color name="md_theme_light_error">#F28B82</color>
-    <color name="md_theme_light_warning">#F7C27D</color>
-    <color name="md_theme_light_success">#8EE5C2</color>
+    <color name="md_theme_light_tertiary">#FFD195</color>
+    <color name="md_theme_light_surface">#0E1625</color>
+    <color name="md_theme_light_surfaceVariant">#162A40</color>
+    <color name="md_theme_light_surfaceContainer">#1A314C</color>
+    <color name="md_theme_light_onSurface">#F2F3F5</color>
+    <color name="md_theme_light_onSurfaceVariant">#B0B4BA</color>
+    <color name="md_theme_light_outline">#2D3C52</color>
+    <color name="md_theme_light_outlineVariant">#1C293A</color>
+    <color name="md_theme_light_error">#FF7A7A</color>
+    <color name="md_theme_light_warning">#F2B872</color>
+    <color name="md_theme_light_success">#7CD8A7</color>
 
-    <color name="colorSuccess">#8EE5C2</color>
-    <color name="colorWarning">#F7C27D</color>
-    <color name="colorError">#F28B82</color>
-    <color name="colorInfo">#9FA8FF</color>
+    <color name="colorSuccess">#7CD8A7</color>
+    <color name="colorWarning">#F2B872</color>
+    <color name="colorError">#FF7A7A</color>
+    <color name="colorInfo">#5AB8FF</color>
 
-    <color name="colorCardStroke">#331ED760</color>
-    <color name="glass_background">#1A1B2922</color>
-    <color name="glass_background_elevated">#26202725</color>
-    <color name="glass_stroke">#401ED760</color>
+    <color name="colorCardStroke">#29F2F3F5</color>
+    <color name="glass_background">#0DFFFFFF</color>
+    <color name="glass_background_elevated">#14FFFFFF</color>
+    <color name="glass_stroke">#33FFFFFF</color>
 
-    <color name="message_incoming_bg">#111C16</color>
-    <color name="message_incoming_stroke">#1F6F3F</color>
-    <color name="message_outgoing_start">#1ED760</color>
-    <color name="message_outgoing_end">#109B44</color>
+    <color name="message_incoming_bg">#CC5AB8FF</color>
+    <color name="message_incoming_stroke">#66A4D9FF</color>
+    <color name="message_outgoing_start">#F47C4C</color>
+    <color name="message_outgoing_end">#FF9A6A</color>
 
-    <color name="text_primary">#F1FFF8</color>
-    <color name="text_secondary">#B0F7C9</color>
-    <color name="text_muted">#6FA585</color>
+    <color name="text_primary">#F2F3F5</color>
+    <color name="text_secondary">#B0B4BA</color>
+    <color name="text_muted">#7D8696</color>
 
-    <color name="bottom_nav_active">#1ED760</color>
-    <color name="bottom_nav_inactive">#335746</color>
+    <color name="bottom_nav_active">#F47C4C</color>
+    <color name="bottom_nav_inactive">#5B6678</color>
 
-    <color name="chat_background_top">#FF050505</color>
-    <color name="chat_background_bottom">#FF0B2C1D</color>
-    <color name="chat_surface">#FF101010</color>
-    <color name="chat_surface_variant">#FF13231A</color>
-    <color name="chat_surface_overlay">#661ED760</color>
-    <color name="chat_accent">#FF1ED760</color>
-    <color name="chat_accent_dim">#991ED760</color>
-    <color name="chat_hint_text">#99F1FFF8</color>
+    <color name="chat_background_top">#FF0E1625</color>
+    <color name="chat_background_bottom">#FF162A40</color>
+    <color name="chat_surface">#121F33</color>
+    <color name="chat_surface_variant">#1A2F47</color>
+    <color name="chat_surface_overlay">#33F2F3F5</color>
+    <color name="chat_accent">#F47C4C</color>
+    <color name="chat_accent_dim">#80F47C4C</color>
+    <color name="chat_secondary_accent">#5AB8FF</color>
+    <color name="chat_hint_text">#66B0B4BA</color>
+    <color name="chat_timestamp">#5AB8FF</color>
 
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
 import android.view.View
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.texty.R
 import com.example.texty.util.AppLogger
@@ -18,6 +17,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import com.google.android.material.progressindicator.CircularProgressIndicator
+import com.google.android.material.snackbar.Snackbar
 
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,7 +81,11 @@ class LoginActivity : AppCompatActivity() {
             is FirebaseNetworkException -> getString(R.string.error_network)
             else -> getString(R.string.error_generic)
           }
-          Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+          Snackbar.make(
+            findViewById(android.R.id.content),
+            message,
+            Snackbar.LENGTH_LONG
+          ).show()
         }
     }
 

@@ -3,7 +3,6 @@ package com.example.texty.ui
 import android.content.Intent
 import android.os.Bundle
 import android.util.Patterns
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.texty.R
@@ -23,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
+import com.google.android.material.snackbar.Snackbar
 
 class RegisterActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -98,10 +98,10 @@ class RegisterActivity : AppCompatActivity() {
           finish()
         } catch (e: Exception) {
           AppLogger.logError(this@RegisterActivity, e)
-          Toast.makeText(
-            this@RegisterActivity,
+          Snackbar.make(
+            findViewById(android.R.id.content),
             e.localizedMessage ?: getString(R.string.error_generic),
-            Toast.LENGTH_LONG
+            Snackbar.LENGTH_LONG
           ).show()
         } finally {
           registerButton.isEnabled = true

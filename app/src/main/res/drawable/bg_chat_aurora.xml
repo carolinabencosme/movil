@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startColor="@color/chat_background_top"
+                android:endColor="@color/chat_background_bottom"
+                android:angle="135" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <size android:width="520dp" android:height="520dp" />
+            <gradient
+                android:type="radial"
+                android:centerX="30%"
+                android:centerY="20%"
+                android:startColor="#335AB8FF"
+                android:endColor="#00336699" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <size android:width="420dp" android:height="420dp" />
+            <gradient
+                android:type="radial"
+                android:centerX="80%"
+                android:centerY="70%"
+                android:startColor="#33F47C4C"
+                android:endColor="#00231F1C" />
+        </shape>
+    </item>
+</layer-list>

@@ -14,10 +14,11 @@
         android:layout_marginStart="24dp"
         android:layout_marginTop="32dp"
         android:layout_marginEnd="24dp"
-        app:cardBackgroundColor="@color/chat_surface_variant"
-        app:cardCornerRadius="28dp"
+        android:stateListAnimator="@null"
+        app:cardBackgroundColor="@color/glass_background_elevated"
+        app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/chat_surface_overlay"
+        app:strokeColor="@color/glass_stroke"
         app:strokeWidth="1dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
@@ -38,7 +39,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/chats_title"
                 android:textColor="@color/chat_accent"
-                android:textSize="24sp"
+                android:textSize="22sp"
+                android:fontFamily="@font/inter_semibold"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -47,8 +49,9 @@
                 style="@style/TextAppearance.Texty.Body"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
+                android:layout_marginTop="6dp"
                 android:layout_marginEnd="8dp"
+                android:fontFamily="@font/inter_medium"
                 android:text="@string/chats_subtitle"
                 android:textColor="@color/text_secondary"
                 app:layout_constraintEnd_toStartOf="@id/actionsContainer"
@@ -74,7 +77,7 @@
                     android:layout_marginStart="8dp"
                     android:contentDescription="@string/create_group"
                     app:icon="@drawable/baseline_add_reaction_24"
-                    app:iconTint="@color/chat_accent" />
+                    app:iconTint="@color/chat_secondary_accent" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonShareLogs"
@@ -84,7 +87,7 @@
                     android:layout_marginStart="8dp"
                     android:contentDescription="@string/share_logs"
                     app:icon="@android:drawable/ic_menu_share"
-                    app:iconTint="@color/chat_accent" />
+                    app:iconTint="@color/chat_secondary_accent" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/buttonLogout"
@@ -94,7 +97,7 @@
                     android:layout_marginStart="8dp"
                     android:contentDescription="@string/logout"
                     app:icon="@drawable/ic_logout"
-                    app:iconTint="@color/chat_accent" />
+                    app:iconTint="@color/chat_secondary_accent" />
 
             </LinearLayout>
 
@@ -108,13 +111,11 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="20dp"
+        android:layout_marginTop="18dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="4dp"
-        app:boxBackgroundColor="@color/chat_surface"
-        app:boxStrokeColor="@color/chat_accent_dim"
-        app:boxStrokeWidth="1dp"
-        app:boxStrokeWidthFocused="2dp"
+        app:boxBackgroundColor="@color/glass_background_elevated"
+        app:boxStrokeColor="@color/text_input_stroke"
         app:startIconTint="@color/chat_accent"
         app:startIconDrawable="@drawable/ic_search"
         app:layout_constraintEnd_toEndOf="parent"
@@ -126,6 +127,7 @@
             style="@style/Widget.Texty.TextInputEditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:fontFamily="@font/inter_medium"
             android:hint="@string/search_hint"
             android:textColor="@color/text_primary"
             android:textColorHint="@color/chat_hint_text"
@@ -138,14 +140,15 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginStart="24dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="16dp"
         android:layout_marginEnd="24dp"
         android:layout_marginBottom="24dp"
         android:animateLayoutChanges="true"
-        app:cardBackgroundColor="@color/chat_surface"
-        app:cardCornerRadius="36dp"
+        android:stateListAnimator="@null"
+        app:cardBackgroundColor="@color/glass_background_elevated"
+        app:cardCornerRadius="20dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/chat_surface_overlay"
+        app:strokeColor="@color/glass_stroke"
         app:strokeWidth="1dp"
         app:layout_constraintTop_toBottomOf="@id/searchLayout"
         app:layout_constraintStart_toStartOf="parent"
@@ -158,7 +161,7 @@
             android:layout_height="match_parent"
             android:animateLayoutChanges="true"
             android:background="@drawable/bg_list_surface"
-            android:padding="12dp">
+            android:padding="16dp">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerChats"
@@ -169,7 +172,7 @@
                 android:paddingEnd="4dp"
                 android:paddingTop="4dp"
                 android:paddingBottom="4dp"
-                android:layoutAnimation="@anim/layout_fade_through" />
+                android:layoutAnimation="@anim/layout_fade_slide" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/textPlaceholder"
@@ -180,6 +183,7 @@
                 android:gravity="center"
                 android:padding="24dp"
                 android:text="@string/no_chats_placeholder"
+                android:textColor="@color/text_secondary"
                 android:visibility="gone" />
 
             <com.google.android.material.progressindicator.CircularProgressIndicator

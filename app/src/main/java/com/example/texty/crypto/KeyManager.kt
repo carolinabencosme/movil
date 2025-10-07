@@ -18,10 +18,14 @@ import org.json.JSONArray
 import org.json.JSONException
 import org.json.JSONObject
 
-// Gestiona la generación y persistencia de llaves de Signal.
+/**
+ * Gestiona la generación y almacenamiento seguro de llaves compatibles con Signal.
+ */
 class KeyManager(context: Context) {
 
-    // Resultado agregado al asegurar llaves.
+    /**
+     * Resultado agregado al asegurar llaves.
+     */
     data class KeyGenerationResult(
         val bundle: KeyBundle,
         val identityKeyUpdated: Boolean,
@@ -29,10 +33,14 @@ class KeyManager(context: Context) {
         val oneTimePreKeysUpdated: Boolean
     )
 
-    // Representa un par de llaves cacheado.
+    /**
+     * Representa un par de llaves cacheado.
+     */
     private data class StoredKeyPair(val publicKey: String, val privateKey: String)
 
-    // Representa un signed pre-key almacenado.
+    /**
+     * Representa un signed pre-key almacenado.
+     */
     private data class StoredSignedPreKey(
         val keyId: Int,
         val publicKey: String,

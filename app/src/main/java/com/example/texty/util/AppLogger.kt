@@ -10,7 +10,9 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-// Centraliza el guardado y compartido de logs locales.
+/**
+ * Centraliza el guardado y compartido de logs locales.
+ */
 object AppLogger {
     private const val TAG = "AppLogger"
     private const val MAX_LOG_FILES = 20

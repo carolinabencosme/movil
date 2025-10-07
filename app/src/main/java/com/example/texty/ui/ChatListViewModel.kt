@@ -20,6 +20,9 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
+/**
+ * ViewModel que agrupa datos de salas, estados cifrados y manejo de listeners.
+ */
 class ChatListViewModel : ViewModel() {
 
     private val sessionKeyRepository = SessionKeyRepository()

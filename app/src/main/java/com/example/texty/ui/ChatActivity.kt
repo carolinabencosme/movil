@@ -56,6 +56,9 @@ import java.text.DateFormat
 import java.util.Date
 import java.util.UUID
 
+/**
+ * Pantalla de conversación que muestra mensajes, gestiona envíos y administración de grupos.
+ */
 class ChatActivity : AppCompatActivity() {
 
   private lateinit var recyclerView: RecyclerView
@@ -110,6 +113,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Verifica sesión y prepara el flujo inicial de chat según el tipo de sala.
+   */
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
 
@@ -150,6 +156,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Configura vistas, listeners y repositorios una vez resueltos los datos básicos.
+   */
   private fun initChat(currentUid: String, peerUid: String?, title: String, isGroupChat: Boolean) {
     setContentView(R.layout.activity_chat)
 
@@ -301,6 +310,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Infla el menú contextual del chat dependiendo de permisos de administración.
+   */
   override fun onCreateOptionsMenu(menu: Menu): Boolean {
     if (isGroup) {
       menuInflater.inflate(R.menu.menu_chat_group, menu)
@@ -309,6 +321,9 @@ class ChatActivity : AppCompatActivity() {
     return super.onCreateOptionsMenu(menu)
   }
 
+  /**
+   * Actualiza el estado de las acciones según el tipo de sala y capacidades del usuario.
+   */
   override fun onPrepareOptionsMenu(menu: Menu): Boolean {
     if (isGroup) {
       menu.findItem(R.id.action_add_members)?.isVisible = canManageMembers
@@ -316,6 +331,9 @@ class ChatActivity : AppCompatActivity() {
     return super.onPrepareOptionsMenu(menu)
   }
 
+  /**
+   * Responde a las acciones del toolbar (agregar miembros, salir o navegar atrás).
+   */
   override fun onOptionsItemSelected(item: MenuItem): Boolean {
     return when (item.itemId) {
       //botón de retroceso
@@ -337,6 +355,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Muestra el diálogo de confirmación antes de abandonar el grupo.
+   */
   private fun showLeaveGroupConfirmation() {
     val resolvedGroupName = groupName ?: getString(R.string.chat_group_default_name)
     MaterialAlertDialogBuilder(this)
@@ -349,6 +370,9 @@ class ChatActivity : AppCompatActivity() {
       .show()
   }
 
+  /**
+   * Ejecuta la lógica para abandonar la sala y mostrar feedback al usuario.
+   */
   private fun performLeaveGroup() {
     val currentUser = Firebase.auth.currentUser ?: return
     val activeRoomId = roomId ?: return
@@ -385,6 +409,9 @@ class ChatActivity : AppCompatActivity() {
 | 8    | Si todo sale bien, muestra mensaje y cierra el cuadro                |
 | 9    | Si hay error, muestra mensaje de fallo                               |
  */
+  /**
+   * Presenta un diálogo para seleccionar amigos y agregarlos al grupo.
+   */
   private fun showAddMembersDialog() {
     val currentUser = Firebase.auth.currentUser ?: return
     val activeRoomId = roomId ?: return
@@ -522,17 +549,25 @@ class ChatActivity : AppCompatActivity() {
     )
   }
 
+  /**
+   * Muestra un mensaje breve utilizando recursos de cadena.
+   */
   private fun showStatusMessage(@StringRes messageResId: Int, duration: Int = Toast.LENGTH_SHORT) {
     if (isFinishing || isDestroyed) return
     Toast.makeText(applicationContext, messageResId, duration).show()
   }
 
+  /**
+   * Muestra un mensaje breve con texto arbitrario.
+   */
   private fun showStatusMessage(message: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
     if (isFinishing || isDestroyed) return
     Toast.makeText(applicationContext, message, duration).show()
   }
 
-
+  /**
+   * Garantiza que exista material de sesión válido antes de iniciar un chat directo.
+   */
   private suspend fun ensureSessionForDirectChat(currentUid: String, peerUid: String): SessionKeyInfo? {
     val rid = roomId ?: listOf(currentUid, peerUid).sorted().joinToString("_")
     var info = loadSessionInfo(rid, currentUid, false, peerUid)
@@ -552,8 +587,9 @@ class ChatActivity : AppCompatActivity() {
     return info
   }
 
-
-  // Envuelve FriendRequestRepository.refreshSession en una función suspend.
+  /**
+   * Envuelve `refreshSession` en una suspensión para facilitar el `await`.
+   */
   private suspend fun refreshSessionAwait(currentUid: String, peerUid: String) =
     suspendCancellableCoroutine<Unit> { cont ->
       FriendRequestRepository().refreshSession(
@@ -564,6 +600,9 @@ class ChatActivity : AppCompatActivity() {
       )
     }
 
+  /**
+   * Carga la información de sesión del repositorio remoto.
+   */
   private suspend fun loadSessionInfo(
     roomId: String,
     ownerUid: String,
@@ -574,7 +613,9 @@ class ChatActivity : AppCompatActivity() {
   } catch (e: Exception) {
     AppLogger.logError(this, e); ErrorLogger.log(this, e); null
   }
-
+    /**
+     * Empieza a escuchar cambios en los mensajes y actualiza la interfaz.
+     */
     private fun startMessageListener(currentUid: String, resolvedRoomId: String) {
         if (::listenerRegistration.isInitialized) {
             listenerRegistration.remove()
@@ -634,7 +675,9 @@ class ChatActivity : AppCompatActivity() {
             }
     }
 
-
+  /**
+   * Marca mensajes como leídos y sincroniza contadores y cifrado en Firestore.
+   */
   private suspend fun updateReadReceipts(
     documents: List<MessageMapper.MessageDocument>,
     currentUid: String,
@@ -657,7 +700,9 @@ class ChatActivity : AppCompatActivity() {
 
     }
   }
-
+  /**
+   * Persiste un mensaje cifrado en Firestore y actualiza resúmenes.
+   */
   private suspend fun sendEncryptedMessage(
     body: MessageBody,
     messageType: String,
@@ -753,6 +798,9 @@ class ChatActivity : AppCompatActivity() {
     if (messageType == MESSAGE_TYPE_TEXT) messageInput.text?.clear()
   }
 
+  /**
+   * Libera listeners y callbacks cuando la pantalla se cierra.
+   */
   override fun onDestroy() {
     if (::listenerRegistration.isInitialized) listenerRegistration.remove()
     roomInfoRegistration?.remove()
@@ -762,8 +810,14 @@ class ChatActivity : AppCompatActivity() {
     super.onDestroy()
   }
 
+  /**
+   * Maneja la navegación hacia atrás desde el botón superior.
+   */
   override fun onSupportNavigateUp(): Boolean { finish(); return true }
 
+  /**
+   * Sube un adjunto y envía la notificación cifrada al resto de participantes.
+   */
   private fun sendImageMessage(
     roomId: String,
     currentUid: String,
@@ -832,6 +886,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Actualiza el banner flotante con la vista previa del último mensaje.
+   */
   private fun showMessageBanner(title: String, preview: String, messageType: String) {
     if (!::messageBanner.isInitialized) return
 
@@ -871,6 +928,9 @@ class ChatActivity : AppCompatActivity() {
     bannerHideRunnable = hideRunnable
     bannerHandler.postDelayed(hideRunnable, 3000)
   }
+  /**
+   * Descarga, descifra y muestra imágenes adjuntas dentro del chat.
+   */
   private fun bindAttachment(
     message: com.example.texty.model.Message,
     imageView: ImageView,
@@ -929,6 +989,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Obtiene participantes desde Firestore y actualiza el caché local.
+   */
   private suspend fun resolveParticipantIds(
     isGroupChat: Boolean,
     currentUid: String,
@@ -945,6 +1008,9 @@ class ChatActivity : AppCompatActivity() {
     }
   }
 
+  /**
+   * Limpia campos obsoletos de la sala para evitar lecturas antiguas.
+   */
   private suspend fun purgeLegacyLastMessageField() {
     try {
       withContext(Dispatchers.IO) {
@@ -953,6 +1019,9 @@ class ChatActivity : AppCompatActivity() {
     } catch (_: Exception) {}
   }
 
+  /**
+   * Escribe resúmenes cifrados y contadores para cada participante.
+   */
   private suspend fun updateEncryptedSummaries(
     participants: List<String>,
     sessionInfo: SessionKeyInfo,

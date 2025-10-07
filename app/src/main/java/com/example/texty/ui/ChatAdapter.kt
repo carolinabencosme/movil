@@ -15,6 +15,9 @@ import com.example.texty.model.Message
 import java.text.SimpleDateFormat
 import java.util.Locale
 
+/**
+ * Adaptador de mensajes que pinta burbujas, estados y adjuntos en el RecyclerView del chat.
+ */
 class ChatAdapter(
     private val myUid: String,
     private val onBindAttachment: (Message, ImageView, TextView) -> Unit,

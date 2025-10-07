@@ -15,6 +15,9 @@ import com.google.firebase.ktx.Firebase
 class UserRepository(private val firestore: FirebaseFirestore = Firebase.firestore) {
     private val usersCollection = firestore.collection("users")
 
+    /**
+     * Busca usuarios cuyo displayName coincide con el prefijo recibido y retorna el resultado por callbacks.
+     */
     fun getUsersByDisplayName(
         displayName: String,
         onSuccess: (List<User>) -> Unit,
@@ -39,6 +42,9 @@ class UserRepository(private val firestore: FirebaseFirestore = Firebase.firesto
             }
     }
 
+    /**
+     * Obtiene la lista de amigos de un usuario resolviendo sus perfiles en Firestore.
+     */
     fun getFriends(uid: String, onSuccess: (List<User>) -> Unit, onFailure: (Exception) -> Unit) {
         usersCollection.document(uid).get()
             .addOnSuccessListener { snapshot ->

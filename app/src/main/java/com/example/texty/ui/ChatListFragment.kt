@@ -31,6 +31,9 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
+/**
+ * Fragmento que lista salas recientes y permite buscar o crear chats grupales.
+ */
 class ChatListFragment : Fragment() {
     private val viewModel: ChatListViewModel by viewModels()
     private lateinit var adapter: ChatListAdapter

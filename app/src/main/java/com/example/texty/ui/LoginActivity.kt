@@ -19,6 +19,9 @@ import com.google.firebase.ktx.Firebase
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 
+/**
+ * Pantalla de inicio de sesión que valida credenciales y lanza la app principal.
+ */
 class LoginActivity : AppCompatActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)

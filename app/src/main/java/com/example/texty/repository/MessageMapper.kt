@@ -10,9 +10,15 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.SetOptions
 import java.util.Locale
 
+/**
+ * Traduce documentos de Firestore a mensajes descifrados y metadatos para la UI.
+ */
 class MessageMapper(
     private val sessionKeyInfo: SessionKeyInfo?,
 ) {
+    /**
+     * Contenedor con el documento original y la representación lista para mostrar.
+     */
     data class MessageDocument(
         val snapshot: DocumentSnapshot,
         val message: Message,
@@ -21,6 +27,9 @@ class MessageMapper(
         val encryptionMetadata: MessageCrypto.EncryptionMetadata?,
     )
 
+    /**
+     * Construye un mensaje a partir del snapshot aplicando descifrado cuando corresponde.
+     */
     fun map(snapshot: DocumentSnapshot): MessageDocument? {
         val senderId = snapshot.getString("senderId") ?: return null
         val senderName = snapshot.getString("senderName") ?: ""
@@ -86,6 +95,9 @@ class MessageMapper(
         )
     }
 
+    /**
+     * Genera la actualización para marcar un mensaje como leído, resincronizando cifrado si aplica.
+     */
     fun buildReadReceiptUpdate(
         document: MessageDocument,
         readerUid: String,
@@ -125,6 +137,9 @@ class MessageMapper(
         return fallbackUpdate to SetOptions.merge()
     }
 
+    /**
+     * Extrae el payload de cifrado moderno almacenado en el documento.
+     */
     private fun buildEncryptionPayload(snapshot: DocumentSnapshot): EncryptionPayload? {
         val ciphertext = snapshot.getString("ciphertext") ?: return null
         val nonce = snapshot.getString("nonce") ?: return null
@@ -144,6 +159,9 @@ class MessageMapper(
         )
     }
 
+    /**
+     * Reconstruye cuerpos de mensajes sin cifrado basados en campos heredados.
+     */
     private fun buildLegacyBody(snapshot: DocumentSnapshot): MessageBody? {
         val text = snapshot.getString("text")
         val imageUrl = snapshot.getString("imageUrl")
@@ -158,6 +176,9 @@ class MessageMapper(
         )
     }
 
+    /**
+     * Deduce el tipo MIME para mensajes antiguos sin `messageType`.
+     */
     private fun deriveLegacyType(snapshot: DocumentSnapshot): String {
         return when {
             !snapshot.getString("imageUrl").isNullOrEmpty() -> "media/image"
@@ -166,6 +187,9 @@ class MessageMapper(
         }
     }
 
+    /**
+     * Calcula el texto visible en listados según el tipo de mensaje.
+     */
     private fun buildDisplayText(body: MessageBody, messageType: String?): String {
         val normalizedType = messageType?.lowercase(Locale.US) ?: ""
         return when {

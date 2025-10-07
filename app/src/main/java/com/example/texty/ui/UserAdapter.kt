@@ -16,6 +16,9 @@ import com.google.android.material.button.MaterialButton
  */
 data class UserListItem(val user: User, val requestStatus: String)
 
+/**
+ * Adaptador que muestra resultados de búsqueda y su estado de amistad.
+ */
 class UserAdapter(
     private val onClick: (User) -> Unit,
     private val onAddClick: (User) -> Unit,

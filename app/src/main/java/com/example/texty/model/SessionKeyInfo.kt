@@ -1,6 +1,8 @@
 package com.example.texty.model
 
-// Describe una clave raíz guardada para un room.
+/**
+ * Describe la clave raíz y metadatos de cifrado guardados para un room.
+ */
 data class SessionKeyInfo(
     val roomId: String,
     val ownerUid: String,

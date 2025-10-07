@@ -2,7 +2,9 @@ package com.example.texty.model
 
 import com.google.firebase.Timestamp
 
-// Modelo de mensaje con metadatos de cifrado.
+/**
+ * Modelo de mensaje con metadatos de cifrado y estado de lectura.
+ */
 data class Message(
     val id: String = "",
     val senderId: String = "",
@@ -16,7 +18,9 @@ data class Message(
     val requiresKeyResync: Boolean = false,
 )
 
-// Contenedor de los campos cifrados del mensaje.
+/**
+ * Contenedor con la carga cifrada y parámetros de derivación.
+ */
 data class EncryptionPayload(
     val ciphertext: String = "",
     val nonce: String = "",
@@ -25,13 +29,17 @@ data class EncryptionPayload(
     val encryptionTarget: String = "",
 )
 
-// Resultado ya descifrado listo para mostrar.
+/**
+ * Resultado del descifrado con cuerpo y texto amigable.
+ */
 data class DecryptedMessage(
     val body: MessageBody,
     val displayText: String,
 )
 
-// Estructura del contenido soportado en el mensaje.
+/**
+ * Estructura del contenido soportado dentro de un mensaje.
+ */
 data class MessageBody(
     val text: String? = null,
     val attachmentUrl: String? = null,

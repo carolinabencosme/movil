@@ -15,6 +15,9 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import java.text.DateFormat
 
+/**
+ * Adaptador que muestra tarjetas de salas en la lista principal de chats.
+ */
 class ChatListAdapter(
     private val onClick: (ChatRoom) -> Unit,
 ) : ListAdapter<ChatRoom, ChatListAdapter.ChatRoomViewHolder>(DIFF_CALLBACK) {

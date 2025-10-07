@@ -17,6 +17,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withContext
 
+/**
+ * Gestiona la generación local y la publicación de bundles de claves en Firestore.
+ */
 class KeyRepository private constructor(
     context: Context,
     private val firestore: FirebaseFirestore = Firebase.firestore
@@ -30,6 +33,9 @@ class KeyRepository private constructor(
         @Volatile
         private var instance: KeyRepository? = null
 
+        /**
+         * Proporciona la instancia singleton del repositorio.
+         */
         fun getInstance(context: Context): KeyRepository {
             return instance ?: synchronized(this) {
                 instance ?: KeyRepository(context.applicationContext).also { instance = it }
@@ -39,15 +45,26 @@ class KeyRepository private constructor(
         private const val USERS_COLLECTION = "users"
     }
 
-
+    /**
+     * Expone el flujo de bundles cacheados para observar cambios.
+     */
     fun observeCache(): StateFlow<Map<String, KeyBundle>> = keyCache.asStateFlow()
 
+    /**
+     * Recupera un bundle almacenado en caché si está disponible.
+     */
     fun getCachedBundle(uid: String): KeyBundle? = keyCache.value[uid]
 
+    /**
+     * Actualiza la caché en memoria con el bundle proporcionado.
+     */
     fun cacheBundle(uid: String, bundle: KeyBundle) {
         keyCache.update { it + (uid to bundle) }
     }
 
+    /**
+     * Garantiza que existan claves locales válidas y las publica si es necesario.
+     */
     suspend fun ensureLocalKeys(uid: String): KeyBundle {
         val result = withContext(Dispatchers.IO) {
             keyManager.ensureKeyBundle()
@@ -57,6 +74,9 @@ class KeyRepository private constructor(
         return result.bundle
     }
 
+    /**
+     * Reemplaza las one-time prekeys cuando quedan pocas disponibles.
+     */
     suspend fun refreshOneTimePreKeysIfNeeded(uid: String): KeyBundle? {
         val currentCount = keyManager.getRemainingOneTimePreKeyCount()
         return if (currentCount < KeyManager.MIN_ONE_TIME_PRE_KEY_THRESHOLD) {
@@ -71,6 +91,9 @@ class KeyRepository private constructor(
         }
     }
 
+    /**
+     * Descarga el bundle público de un usuario y lo cachea.
+     */
     suspend fun fetchBundle(uid: String): KeyBundle? {
         keyCache.value[uid]?.let { return it }
         val snapshot = firestore.collection(USERS_COLLECTION).document(uid).get().await()
@@ -82,14 +105,23 @@ class KeyRepository private constructor(
         return bundle
     }
 
+    /**
+     * Marca una one-time prekey local como consumida.
+     */
     fun markOneTimePreKeyAsUsed(keyId: Int) {
         keyManager.markOneTimePreKeyAsUsed(keyId)
     }
 
+    /**
+     * Devuelve el bundle generado en el dispositivo si existe.
+     */
     suspend fun getLocalBundle(): KeyBundle? = withContext(Dispatchers.IO) {
         keyManager.getCachedBundle()
     }
 
+    /**
+     * Publica en Firestore el bundle generado cuando faltan claves o hubo cambios.
+     */
     private suspend fun publishIfNeeded(uid: String, result: KeyManager.KeyGenerationResult) {
         val docRef = firestore.collection(USERS_COLLECTION).document(uid)
         val snapshot = docRef.get().await()

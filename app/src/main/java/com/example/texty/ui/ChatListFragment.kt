@@ -2,10 +2,11 @@ package com.example.texty.ui
 
 import android.content.Intent
 import android.os.Bundle
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.CheckBox
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -20,7 +21,7 @@ import com.example.texty.repository.ChatRoomRepository
 import com.example.texty.repository.UserRepository
 import com.example.texty.util.AppLogger
 import com.example.texty.util.ErrorLogger
-import com.google.android.material.appbar.MaterialToolbar
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.progressindicator.CircularProgressIndicator
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.textfield.TextInputEditText
@@ -50,7 +51,6 @@ class ChatListFragment : Fragment() {
         container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        setHasOptionsMenu(true)
         return inflater.inflate(R.layout.fragment_chat_list, container, false)
     }
 
@@ -58,9 +58,6 @@ class ChatListFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         val currentUser = Firebase.auth.currentUser ?: return // 👈 evita crash si ya está null
-        val toolbar = view.findViewById<MaterialToolbar>(R.id.topAppBar)
-        val activity = requireActivity() as AppCompatActivity
-        activity.setSupportActionBar(toolbar)
 
         adapter = ChatListAdapter { room ->
             if (room.isGroup) {
@@ -97,6 +94,18 @@ class ChatListFragment : Fragment() {
         searchInput = view.findViewById(R.id.editSearch)
         searchInput.addTextChangedListener { text ->
             filterRooms(text?.toString() ?: "")
+        }
+
+        view.findViewById<MaterialButton>(R.id.buttonCreateGroup).setOnClickListener {
+            openCreateGroupDialog()
+        }
+
+        view.findViewById<MaterialButton>(R.id.buttonShareLogs).setOnClickListener {
+            AppLogger.shareLogs(requireContext())
+        }
+
+        view.findViewById<MaterialButton>(R.id.buttonLogout).setOnClickListener {
+            performLogout()
         }
 
         viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
@@ -223,33 +232,6 @@ class ChatListFragment : Fragment() {
         }
     }
 
-
-    override fun onCreateOptionsMenu(menu: Menu, inflater: MenuInflater) {
-        inflater.inflate(R.menu.menu_chat_list, menu)
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_create_group -> {
-                openCreateGroupDialog()
-                true
-            }
-            R.id.action_logout -> {
-                FirebaseAuth.getInstance().signOut()
-                // 👇 redirigir inmediatamente para que el fragmento no intente acceder al usuario null
-                val intent = Intent(requireContext(), LoginActivity::class.java)
-                intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                startActivity(intent)
-                requireActivity().finish()
-                true
-            }
-            R.id.action_share_logs -> {
-                AppLogger.shareLogs(requireContext())
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
 
     private fun filterRooms(query: String) {
         if (query.isBlank()) {
@@ -396,6 +378,15 @@ class ChatListFragment : Fragment() {
 
     private class FriendVH(view: View) : RecyclerView.ViewHolder(view) {
         val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
+    }
+
+    private fun performLogout() {
+        FirebaseAuth.getInstance().signOut()
+        val intent = Intent(requireContext(), LoginActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+        startActivity(intent)
+        requireActivity().finish()
     }
 }
 

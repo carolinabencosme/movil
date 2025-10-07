@@ -115,6 +115,18 @@
         <item name="android:textSize">16sp</item>
     </style>
 
+    <style name="Widget.Texty.IconButton" parent="Widget.Material3.Button.IconButton">
+        <item name="android:minWidth">0dp</item>
+        <item name="android:minHeight">0dp</item>
+        <item name="android:paddingLeft">0dp</item>
+        <item name="android:paddingRight">0dp</item>
+        <item name="android:paddingTop">0dp</item>
+        <item name="android:paddingBottom">0dp</item>
+        <item name="backgroundTint">@color/chat_surface</item>
+        <item name="iconTint">@color/chat_accent</item>
+        <item name="rippleColor">@color/chat_surface_overlay</item>
+    </style>
+
     <style name="TextAppearance.Texty.Headline" parent="TextAppearance.Material3.TitleLarge">
         <item name="android:textColor">@color/text_primary</item>
         <item name="android:fontFamily">sans-serif-medium</item>

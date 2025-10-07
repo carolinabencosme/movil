@@ -128,7 +128,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        setOnlineStatus(true)
 
         // Solo pedimos notificaciones al iniciar (Android 13+).
         requestNotificationsWithRationale()
@@ -140,16 +139,6 @@ class MainActivity : AppCompatActivity() {
                 KeyRepository.getInstance(applicationContext).refreshOneTimePreKeysIfNeeded(uid)
             }
         }
-    }
-
-    override fun onStop() {
-        setOnlineStatus(false)
-        super.onStop()
-    }
-
-    private fun setOnlineStatus(online: Boolean) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        Firebase.firestore.collection("users").document(uid).update("isOnline", online)
     }
 
     // -------------------- Notificaciones: token FCM --------------------

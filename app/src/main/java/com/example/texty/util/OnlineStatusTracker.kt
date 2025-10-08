@@ -7,6 +7,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
@@ -104,7 +105,7 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
 
         firestore.collection("users")
             .document(uid)
-            .set(mapOf("isOnline" to online), SetOptions.merge())
+            .set(buildPresenceUpdate(online), SetOptions.merge())
             .addOnSuccessListener {
                 if (currentUid == uid && activeRequestId == requestId) {
                     lastReportedStatus = online
@@ -155,9 +156,15 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
     private fun markOffline(uid: String) {
         firestore.collection("users")
             .document(uid)
-            .set(mapOf("isOnline" to false), SetOptions.merge())
+            .set(buildPresenceUpdate(false), SetOptions.merge())
             .addOnFailureListener { e ->
                 Log.w(TAG, "No se pudo forzar estado offline para $uid", e)
             }
     }
+
+    private fun buildPresenceUpdate(online: Boolean) = mapOf(
+        "isOnline" to online,
+        // Eliminamos el campo heredado "online" para evitar estados contradictorios.
+        "online" to FieldValue.delete(),
+    )
 }

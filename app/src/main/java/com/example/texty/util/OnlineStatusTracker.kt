@@ -1,5 +1,7 @@
 package com.example.texty.util
 
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
@@ -18,11 +20,22 @@ import com.google.firebase.ktx.Firebase
 object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateListener {
 
     private const val TAG = "OnlineStatusTracker"
+    private const val RETRY_DELAY_MS = 3_000L
+
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = Firebase.firestore
+    private val handler = Handler(Looper.getMainLooper())
 
     private var initialized = false
     private var currentUid: String? = null
+    private var targetStatus: Boolean? = null
     private var lastReportedStatus: Boolean? = null
     private var isInForeground = false
+
+    private var updateInFlight = false
+    private var requestCounter = 0L
+    private var activeRequestId: Long? = null
+    private var retryRunnable: Runnable? = null
 
     /** Call once from [android.app.Application.onCreate] to start monitoring. */
     fun initialize() {
@@ -30,12 +43,13 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
         initialized = true
 
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
-        FirebaseAuth.getInstance().addAuthStateListener(this)
+        auth.addAuthStateListener(this)
 
         isInForeground = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(
             androidx.lifecycle.Lifecycle.State.STARTED
         )
-        currentUid = FirebaseAuth.getInstance().currentUser?.uid
+        currentUid = auth.currentUser?.uid
+        targetStatus = currentUid?.let { isInForeground }
         syncPresence()
     }
 
@@ -54,36 +68,96 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
         val previousUid = currentUid
 
         if (previousUid != null && previousUid != newUid) {
-            setOnlineStatus(previousUid, false)
+            markOffline(previousUid)
         }
 
         currentUid = newUid
+        targetStatus = newUid?.let { isInForeground }
         lastReportedStatus = null
+        updateInFlight = false
+        activeRequestId = null
+        cancelRetry()
         syncPresence()
     }
 
     private fun syncPresence() {
         val uid = currentUid ?: run {
+            targetStatus = null
             lastReportedStatus = null
             return
         }
 
         val desiredStatus = isInForeground
+        targetStatus = desiredStatus
+
+        if (updateInFlight) return
         if (lastReportedStatus == desiredStatus) return
 
-        setOnlineStatus(uid, desiredStatus)
+        dispatchStatus(uid, desiredStatus)
     }
 
-    private fun setOnlineStatus(uid: String, online: Boolean) {
-        Firebase.firestore.collection("users")
+    private fun dispatchStatus(uid: String, online: Boolean) {
+        updateInFlight = true
+        val requestId = ++requestCounter
+        activeRequestId = requestId
+        cancelRetry()
+
+        firestore.collection("users")
             .document(uid)
             .set(mapOf("isOnline" to online), SetOptions.merge())
             .addOnSuccessListener {
-                lastReportedStatus = online
+                if (currentUid == uid && activeRequestId == requestId) {
+                    lastReportedStatus = online
+                }
             }
             .addOnFailureListener { e ->
+                if (currentUid == uid && activeRequestId == requestId) {
+                    lastReportedStatus = null
+                    scheduleRetry()
+                }
                 Log.w(TAG, "No se pudo actualizar el estado en línea para $uid", e)
-                lastReportedStatus = null
+            }
+            .addOnCompleteListener { task ->
+                if (activeRequestId != requestId) return@addOnCompleteListener
+
+                updateInFlight = false
+                activeRequestId = null
+
+                if (task.isSuccessful) {
+                    val nextUid = currentUid
+                    val desired = targetStatus
+                    if (nextUid != null && desired != null && desired != lastReportedStatus) {
+                        dispatchStatus(nextUid, desired)
+                    }
+                }
+            }
+    }
+
+    private fun scheduleRetry() {
+        if (retryRunnable != null) return
+
+        val runnable = Runnable {
+            retryRunnable = null
+            if (!updateInFlight) {
+                syncPresence()
+            }
+        }
+
+        retryRunnable = runnable
+        handler.postDelayed(runnable, RETRY_DELAY_MS)
+    }
+
+    private fun cancelRetry() {
+        retryRunnable?.let { handler.removeCallbacks(it) }
+        retryRunnable = null
+    }
+
+    private fun markOffline(uid: String) {
+        firestore.collection("users")
+            .document(uid)
+            .set(mapOf("isOnline" to false), SetOptions.merge())
+            .addOnFailureListener { e ->
+                Log.w(TAG, "No se pudo forzar estado offline para $uid", e)
             }
     }
 }

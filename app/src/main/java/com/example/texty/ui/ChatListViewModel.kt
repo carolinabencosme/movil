@@ -23,32 +23,78 @@ import kotlinx.coroutines.launch
 /**
  * ViewModel que agrupa datos de salas, estados cifrados y manejo de listeners.
  */
+/**
+ * ViewModel responsable de:
+ * - Escuchar en tiempo real las salas (rooms) del usuario actual desde Firestore.
+ * - Descifrar el “summary” (preview del último mensaje) por room usando llaves de sesión.
+ * - Sincronizar foto de usuario en chats 1:1.
+ * - Publicar una lista combinada de [ChatRoom] hacia la UI (LiveData).
+ *
+ * Caches principales:
+ * - [baseRooms]: rooms tal como vienen de Firestore (sin preview).
+ * - [summaryStates]: estado del resumen (preview descifrado, error, requiere resincronización).
+ * - [sessionCache]: llaves de sesión por room para evitar recargas repetidas.
+ * - [userPhotoCache]: cache de photoUrl por userUid (solo 1:1).
+ */
 class ChatListViewModel : ViewModel() {
 
     private val sessionKeyRepository = SessionKeyRepository()
 
     private val _rooms = MutableLiveData<List<ChatRoom>>()
+    /** LiveData de rooms combinadas (base + summary) listas para pintar en UI. */
     val rooms: LiveData<List<ChatRoom>> = _rooms
 
     private val _loading = MutableLiveData<Boolean>()
+    /** LiveData de estado de carga (true = cargando). */
     val loading: LiveData<Boolean> = _loading
 
     private val _error = MutableLiveData<Exception?>()
+    /** LiveData de error para diagnóstico/logging. */
     val error: LiveData<Exception?> = _error
 
+    /** Listener principal de rooms (colección `rooms`). */
     private var roomsListener: ListenerRegistration? = null
+
+    /** Listeners de estado por room (subcolección `userState` por ownerUid). */
     private val userStateListeners = mutableMapOf<String, ListenerRegistration>()
 
+    /** Cache base de rooms por roomId (sin preview). */
     private val baseRooms = mutableMapOf<String, ChatRoom>()
+
+    /** Cache de estados de resumen por roomId (preview, error, resync). */
     private val summaryStates = mutableMapOf<String, RoomSummaryState>()
+
+    /** Cache de llaves de sesión por roomId. */
     private val sessionCache = mutableMapOf<String, SessionKeyInfo>()
+
+    /** Rooms a las que ya se les “purgó” el campo legacy lastMessage. */
     private val purgedRooms = mutableSetOf<String>()
 
+    /** Cache de photoUrl por userUid. */
     private val userPhotoCache = mutableMapOf<String, String?>()
+
+    /** Listeners de foto de usuario por userUid. */
     private val userPhotoListeners = mutableMapOf<String, ListenerRegistration>()
 
-
+    /** UID actual (dueño de la bandeja). */
     private var currentUserUid: String? = null
+
+    /**
+     * Inicia la escucha en tiempo real de las rooms del usuario actual.
+     * - Fija [currentUserUid] y activa [_loading].
+     * - Suscribe un snapshot listener a `rooms` filtrando por `participantIds` que contengan al usuario.
+     * - Por cada documento:
+     *   - Extrae campos base (participantes, nombres, flags, timestamps, unreadCounts).
+     *   - Resuelve `photoUrl`:
+     *       * Grupo: `groupPhotoUrl` (si guardas eso en el doc).
+     *       * 1:1: desde [userPhotoCache] y añade listener con [ensureUserPhotoListener].
+     *   - Purga campo legacy `lastMessage` (si existiera) con [purgeLegacyLastMessage].
+     *   - Asegura listener de estado/summary con [ensureUserStateListener].
+     * - Elimina rooms que ya no vienen en el snapshot.
+     * - Publica la lista final combinada con [publishRooms].
+     *
+     * @param currentUserUid UID del usuario propietario de la bandeja de chats.
+     */
 
     fun startListening(currentUserUid: String) {
         if (roomsListener != null) return
@@ -156,7 +202,15 @@ class ChatListViewModel : ViewModel() {
                 publishRooms()
             }
     }
-
+    /**
+     * Garantiza un listener de foto para el usuario dado (1:1). Al cambiar `photoUrl`
+     * en `users/{userUid}`, actualiza el cache y **refresca** todas las rooms 1:1
+     * donde participa este usuario, publicando la nueva lista con [publishRooms].
+     *
+     * @param userUid UID del usuario del cual se escucha `photoUrl`.
+     * @param roomId Room que originó esta subscripción (no se usa directamente; se
+     *               escucha por user para reutilizar la foto en múltiples rooms 1:1).
+     */
     private fun ensureUserPhotoListener(userUid: String, roomId: String) {
         if (userPhotoListeners.containsKey(userUid)) return
 
@@ -183,7 +237,13 @@ class ChatListViewModel : ViewModel() {
         userPhotoListeners[userUid] = l
     }
 
-
+    /**
+     * Limpia todos los listeners activos y caches asociados cuando el ViewModel
+     * es destruido por el sistema (fin del ciclo de vida).
+     * - Detiene listener global de rooms.
+     * - Detiene listeners por room (userState).
+     * - Detiene listeners de foto de usuario.
+     */
     override fun onCleared() {
         roomsListener?.remove()
         userStateListeners.values.forEach { it.remove() }
@@ -196,6 +256,16 @@ class ChatListViewModel : ViewModel() {
         super.onCleared()
     }
 
+    /**
+     * Asegura un listener del documento `rooms/{roomId}/userState/{ownerUid}` para leer
+     * el “summary” **cifrado** del último mensaje dirigido al propietario. En cada cambio:
+     * - Si hay error → marca estado con `hasError=true`.
+     * - Si no existe el doc → elimina estado.
+     * - Si existe → lanza corrutina en IO que descifra el payload con [decryptSummary]
+     *   y luego publica con [publishRooms].
+     *
+     * @param roomId Identificador de la sala.
+     */
 
     private fun ensureUserStateListener(roomId: String) {
         val ownerUid = currentUserUid ?: return
@@ -234,7 +304,19 @@ class ChatListViewModel : ViewModel() {
 
         userStateListeners[roomId] = listener
     }
-
+    /**
+     * Descifra el “summary” del room:
+     * - Obtiene/Cachea la sesión criptográfica ([SessionKeyInfo]) para la room.
+     * - Construye el [EncryptionPayload] con [buildSummaryPayload] desde el snapshot.
+     * - Construye metadatos con [buildSummaryMetadata].
+     * - Llama a [MessageCrypto.decrypt] y obtiene el `preview` (texto) si todo sale bien.
+     * - Marca `requiresResync` si la sesión lo indica o el resultado lo requiere.
+     *
+     * @param roomId Room objetivo.
+     * @param snapshot Snapshot del doc `userState/{ownerUid}` con campos summary*.
+     * @param ownerUid UID del propietario (destinatario del resumen).
+     * @return [RoomSummaryState] con preview/flags, o null si falla carga de sesión.
+     */
     private suspend fun decryptSummary(
         roomId: String,
         snapshot: DocumentSnapshot,
@@ -277,7 +359,14 @@ class ChatListViewModel : ViewModel() {
             requiresResync = requiresResync,
         )
     }
-
+    /**
+     * Construye el payload de cifrado (ciphertext, nonce, salt, versión de esquema
+     * y objetivo de cifrado) a partir del snapshot `userState`.
+     *
+     * @param snapshot Documento con campos `summaryCiphertext`, `summaryNonce`,
+     * `summarySalt`, `summarySchemeVersion`, `summaryEncryptionTarget`.
+     * @return [EncryptionPayload] válido o `null` si faltan campos esenciales.
+     */
     private fun buildSummaryPayload(snapshot: DocumentSnapshot): EncryptionPayload? {
         val ciphertext = snapshot.getString("summaryCiphertext") ?: return null
         val nonce = snapshot.getString("summaryNonce") ?: return null
@@ -293,7 +382,18 @@ class ChatListViewModel : ViewModel() {
             encryptionTarget = target,
         )
     }
-
+    /**
+     * Construye metadatos de cifrado para el descifrado del summary:
+     * - messageType: p. ej., `summary:text/plain` (default).
+     * - senderId: remitente del summary (fallback al owner).
+     * - readBy: lista de UIDs que leyeron (fallback al owner).
+     * - schemeVersion y encryptionTarget: del payload o de la sesión.
+     *
+     * @param snapshot Snapshot con `summaryMessageType`, `summarySenderId`, `summaryReadBy`.
+     * @param payload Payload con parámetros criptográficos.
+     * @param session Sesión actual para la room (target/versión).
+     * @param ownerUid UID del propietario (fallbacks).
+     */
     private fun buildSummaryMetadata(
         snapshot: DocumentSnapshot,
         payload: EncryptionPayload,
@@ -315,7 +415,13 @@ class ChatListViewModel : ViewModel() {
             encryptionTarget = encryptionTarget,
         )
     }
-
+    /**
+     * Purga el campo legacy `lastMessage` dentro del documento de room (si existe),
+     * usando `FieldValue.delete()` con `SetOptions.merge()`. Se hace una sola vez por room,
+     * controlado por [purgedRooms].
+     *
+     * @param reference Referencia al documento `rooms/{roomId}`.
+     */
     private fun purgeLegacyLastMessage(reference: DocumentReference) {
         reference
             .set(mapOf("lastMessage" to FieldValue.delete()), SetOptions.merge())
@@ -323,6 +429,13 @@ class ChatListViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Publica la lista de rooms combinadas hacia la UI:
+     * - Toma [baseRooms].
+     * - Mezcla cada room con su [RoomSummaryState] si existe (preview, flags).
+     * - Ordena por `updatedAt` descendentemente.
+     * - Emite por [_rooms] con `postValue` (thread-safe desde corrutinas).
+     */
     private fun publishRooms() {
         val combined = baseRooms.values.map { room ->
             val summary = summaryStates[room.id]
@@ -335,7 +448,13 @@ class ChatListViewModel : ViewModel() {
 
         _rooms.postValue(combined)
     }
-
+    /**
+     * Estructura interna para guardar el resultado del descifrado del summary.
+     *
+     * @property preview Texto del preview (si fue posible descifrar).
+     * @property hasError true si no se pudo obtener/descifrar el preview.
+     * @property requiresResync true si se necesita resincronizar llaves/sesión.
+     */
     private data class RoomSummaryState(
         val preview: String?,
         val hasError: Boolean,

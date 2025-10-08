@@ -314,3 +314,53 @@ class MainActivity : AppCompatActivity() {
     }
 
 }
+/**
+ * MainActivity — Resumen funcional
+ *
+ * Responsabilidades principales
+ * - Aloja la navegación inferior (BottomNavigation) y conmuta entre fragmentos
+ *   (Chats, Buscar usuarios, Solicitudes, Perfil).
+ * - Orquesta permisos sensibles con “rationale” (POST_NOTIFICATIONS en Android 13+,
+ *   CAMERA y lectura de galería en flujos legacy).
+ * - Integra el Photo Picker moderno para seleccionar imágenes sin pedir permisos
+ *   de almacenamiento en Android 13+ (fallback legacy disponible).
+ * - Registra y sincroniza el token FCM del dispositivo en Firestore para recibir
+ *   notificaciones push.
+ * - Garantiza la preparación/renovación de claves criptográficas locales
+ *   (ensureLocalKeys y refreshOneTimePreKeysIfNeeded) al iniciar.
+ *
+ * Flujo de vida y navegación
+ * - onCreate: infla layout, instala BottomNavigation, abre Chats por defecto,
+ *   garantiza claves locales y configura manejo de salida con fragmentos que
+ *   tengan cambios pendientes (PendingChangesHandler).
+ * - onStart: solicita permiso de notificaciones (Android 13+), ejecuta un
+ *   onboarding de permisos de cámara/galería (solo primera vez, con prefs) y
+ *   refresca claves de una sola vez si corresponde.
+ *
+ * Permisos y pickers
+ * - requestNotificationsWithRationale(): solicita POST_NOTIFICATIONS con diálogo
+ *   explicativo cuando aplique; si se concede, envía token FCM.
+ * - requestCameraWithRationale(): solicita CAMERA y, si se concede, invoca openCamera().
+ * - requestGalleryWithRationale(): prioriza Photo Picker; en modo legacy pide READ_* y
+ *   luego abre la galería (openGalleryLegacy()).
+ * - pickMedia (Activity Result): devuelve una Uri de imagen y la procesa en
+ *   handlePickedImage(uri).
+ *
+ * Notificaciones (FCM)
+ * - sendFcmToken(): obtiene el token de FirebaseMessaging y lo guarda en
+ *   users/{uid}.fcmTokens (arrayUnion) para habilitar notificaciones push.
+ *
+ * Utilidades internas
+ * - replaceFragment(Fragment): realiza el cambio del fragmento visible.
+ * - showRationaleDialog(...): muestra un AlertDialog de explicación antes de
+ *   solicitar permisos.
+ * - maybePromptMediaPermsOnFirstRun(): corre una sola vez (SharedPreferences) para
+ *   solicitar cámara/galería según la versión de Android y el flujo elegido.
+ *
+ * Notas
+ * - Los métodos openCamera(), openGalleryLegacy() y handlePickedImage(uri)
+ *   están listos para integrar el flujo real (CameraX, Storage, subida, etc.).
+ * - Se usa suppressNavigationHandling para evitar bucles al actualizar la selección
+ *   del BottomNavigation de forma programática.
+ */
+

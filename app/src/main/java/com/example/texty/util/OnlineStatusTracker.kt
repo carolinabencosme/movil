@@ -2,19 +2,15 @@ package com.example.texty.util
 
 import android.util.Log
 import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
-/**
- * Tracks the online presence of the authenticated user and keeps Firestore updated in real time.
- *
- * This observer listens to both process level lifecycle events and FirebaseAuth state changes so
- * that the `isOnline` flag reflects whether the app is in foreground with a logged in user.
- */
 object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateListener {
 
     private const val TAG = "OnlineStatusTracker"
@@ -24,17 +20,15 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
     private var lastReportedStatus: Boolean? = null
     private var isInForeground = false
 
-    /** Call once from [android.app.Application.onCreate] to start monitoring. */
     fun initialize() {
         if (initialized) return
         initialized = true
 
-        ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+        val processLifecycle = ProcessLifecycleOwner.get().lifecycle
+        processLifecycle.addObserver(this)
         FirebaseAuth.getInstance().addAuthStateListener(this)
 
-        isInForeground = ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(
-            androidx.lifecycle.Lifecycle.State.STARTED
-        )
+        isInForeground = processLifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
         currentUid = FirebaseAuth.getInstance().currentUser?.uid
         syncPresence()
     }
@@ -51,11 +45,8 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
 
     override fun onAuthStateChanged(auth: FirebaseAuth) {
         val newUid = auth.currentUser?.uid
-        val previousUid = currentUid
-
-        if (previousUid != null && previousUid != newUid) {
-            setOnlineStatus(previousUid, false)
-        }
+        val prevUid = currentUid
+        if (prevUid != null && prevUid != newUid) setOnlineStatus(prevUid, false)
 
         currentUid = newUid
         lastReportedStatus = null
@@ -63,26 +54,25 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
     }
 
     private fun syncPresence() {
-        val uid = currentUid ?: run {
-            lastReportedStatus = null
-            return
-        }
-
-        val desiredStatus = isInForeground
-        if (lastReportedStatus == desiredStatus) return
-
-        setOnlineStatus(uid, desiredStatus)
+        val uid = currentUid ?: run { lastReportedStatus = null; return }
+        val desired = isInForeground
+        if (lastReportedStatus == desired) return
+        setOnlineStatus(uid, desired)
     }
 
     private fun setOnlineStatus(uid: String, online: Boolean) {
-        Firebase.firestore.collection("users")
-            .document(uid)
-            .set(mapOf("isOnline" to online), SetOptions.merge())
-            .addOnSuccessListener {
-                lastReportedStatus = online
-            }
-            .addOnFailureListener { e ->
-                Log.w(TAG, "No se pudo actualizar el estado en línea para $uid", e)
+        Firebase.firestore.collection("users").document(uid)
+            .set(
+                mapOf(
+                    "isOnline" to online,
+                    "online" to online, // compat con UI que lea 'online'
+                    "lastActive" to FieldValue.serverTimestamp()
+                ),
+                SetOptions.merge()
+            )
+            .addOnSuccessListener { lastReportedStatus = online }
+            .addOnFailureListener {
+                Log.w(TAG, "No se pudo actualizar online para $uid", it)
                 lastReportedStatus = null
             }
     }

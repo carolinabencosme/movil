@@ -5,6 +5,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 
@@ -71,15 +72,18 @@ object OnlineStatusTracker : DefaultLifecycleObserver, FirebaseAuth.AuthStateLis
         if (lastReportedStatus == desiredStatus) return
 
         setOnlineStatus(uid, desiredStatus)
-        lastReportedStatus = desiredStatus
     }
 
     private fun setOnlineStatus(uid: String, online: Boolean) {
         Firebase.firestore.collection("users")
             .document(uid)
-            .update("isOnline", online)
+            .set(mapOf("isOnline" to online), SetOptions.merge())
+            .addOnSuccessListener {
+                lastReportedStatus = online
+            }
             .addOnFailureListener { e ->
                 Log.w(TAG, "No se pudo actualizar el estado en línea para $uid", e)
+                lastReportedStatus = null
             }
     }
 }

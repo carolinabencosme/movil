@@ -21,9 +21,9 @@
     <color name="md_theme_light_outlineVariant">#1C293A</color>
     <color name="md_theme_light_error">#FF7A7A</color>
     <color name="md_theme_light_warning">#F2B872</color>
-    <color name="md_theme_light_success">#7CD8A7</color>
+    <color name="md_theme_light_success">#37D883</color>
 
-    <color name="colorSuccess">#7CD8A7</color>
+    <color name="colorSuccess">#37D883</color>
     <color name="colorWarning">#F2B872</color>
     <color name="colorError">#FF7A7A</color>
     <color name="colorInfo">#5AB8FF</color>

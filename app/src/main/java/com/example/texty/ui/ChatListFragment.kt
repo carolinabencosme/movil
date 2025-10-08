@@ -34,24 +34,79 @@ import com.google.firebase.ktx.Firebase
 /**
  * Fragmento que lista salas recientes y permite buscar o crear chats grupales.
  */
+/**
+ * Fragmento que lista salas de chat recientes y permite:
+ * - Buscar chats (filtro por nombre de grupo o contacto).
+ * - Crear nuevos chats grupales mediante un diálogo con multi-selección de amigos.
+ * - Mostrar estado de presencia (online/offline) en chats individuales, sincronizado en tiempo real.
+ *
+ * Integra:
+ * - **Firebase Auth**: para identificar al usuario actual.
+ * - **Firebase Firestore**: snapshots en tiempo real para amigos/presencia.
+ * - **ViewModel (ChatListViewModel)**: expone LiveData de rooms y loading.
+ * - **RecyclerView + ChatListAdapter**: render y actualizaciones eficientes.
+ * - **Material Components**: progreso, botones, TextInput y Snackbar.
+ */
 class ChatListFragment : Fragment() {
+    /** ViewModel que provee rooms y estado de carga mediante LiveData. */
     private val viewModel: ChatListViewModel by viewModels()
+
+    /** Adaptador de la lista de chats; maneja avatar, preview, presencia y clicks. */
     private lateinit var adapter: ChatListAdapter
+
+    /** Campo de texto para buscar salas/usuarios por nombre. */
     private lateinit var searchInput: TextInputEditText
+
+    /** Cache local de todas las rooms combinadas (rooms reales + “friend rooms”). */
     private var allRooms: List<ChatRoom> = emptyList()
+
+    /** Recycler principal de la lista de chats. */
     private lateinit var recycler: RecyclerView
+
+    /** Placeholder cuando no hay resultados/salas. */
     private lateinit var placeholder: TextView
+
+    /** Indicador de progreso mientras carga/escucha datos. */
     private lateinit var progressBar: CircularProgressIndicator
+
+    /** Cache de amigos (User) ya cargados desde Firestore. */
     private var cachedFriends: List<User>? = null
+
+    /** Rooms pendientes de combinar hasta que lleguen los amigos. */
     private var pendingRooms: List<ChatRoom>? = null
+
+    /** Registro del listener de cambios del documento del usuario (lista de amigos). */
     private var friendsRegistration: ListenerRegistration? = null
+
+    /** Listeners de presencia por userId -> ListenerRegistration. */
     private val presenceListeners = mutableMapOf<String, ListenerRegistration>()
+
+    /** Cache de presencia: userId -> User (incluye flag isOnline). */
     private val presenceCache = mutableMapOf<String, User>()
+
+    /** Cache de amigos filtrados desde presencia (solo los friendIds). */
     private val friendCache = mutableMapOf<String, User>()
+
+    /** Conjunto de ids de amigos que seguimos (para presencia). */
     private var trackedFriendIds: Set<String> = emptySet()
+
+    /** Conjunto de ids de participantes (no amigos) que aparecen en rooms. */
     private var trackedParticipantIds: Set<String> = emptySet()
+
+    /** Repositorio para crear grupos (write en Firestore). */
     private val chatRoomRepository = ChatRoomRepository()
 
+    /**
+     * Infla la vista del fragmento.
+     *
+     * Usa el layout `fragment_chat_list` que contiene:
+     * - Recycler de chats
+     * - Campos de búsqueda
+     * - Botones (crear grupo, compartir logs, logout)
+     * - Indicador de progreso y placeholder.
+     *
+     * @return La vista raíz inflada.
+     */
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -59,12 +114,25 @@ class ChatListFragment : Fragment() {
     ): View? {
         return inflater.inflate(R.layout.fragment_chat_list, container, false)
     }
-
+    /**
+     * Configura UI, listeners y suscripciones a LiveData/Snapshots.
+     * Flujo principal:
+     * 1) Verifica usuario actual (Firebase.auth.currentUser); si no existe, retorna (evita crash).
+     * 2) Instancia `ChatListAdapter` con callback de click para abrir chats (grupal o 1-1).
+     * 3) Prepara RecyclerView (LayoutManager + adapter) y campo de búsqueda (filtro en vivo).
+     * 4) Wirea botones: crear grupo, compartir logs y logout.
+     * 5) Observa LiveData del ViewModel: loading (progress) y rooms (datos).
+     * 6) Inicia listeners en tiempo real:
+     *    - Amigos del usuario actual (`startFriendsRealtime(uid)`).
+     *    - Rooms (`viewModel.startListening(uid)`).
+     *
+     * @param view Vista raíz creada en onCreateView.
+     * @param savedInstanceState Estado previo (si existe).
+     */
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val currentUser = Firebase.auth.currentUser ?: return // 👈 evita crash si ya está null
-
+        val currentUser = Firebase.auth.currentUser ?: return
         adapter = ChatListAdapter { room ->
             if (room.isGroup) {
                 val intent = Intent(requireContext(), ChatActivity::class.java).apply {
@@ -133,6 +201,13 @@ class ChatListFragment : Fragment() {
     }
 
 
+    /**
+     * Limpia listeners y caches asociados a la vista para evitar fugas de memoria:
+     * - Detiene listener de amigos.
+     * - Detiene todos los listeners de presencia.
+     * - Limpia caches de presencia y amigos, así como sets de seguimiento.
+     * Se invoca cuando la vista se destruye (ciclo de vida del Fragment).
+     */
     override fun onDestroyView() {
         super.onDestroyView()
         friendsRegistration?.remove()
@@ -145,7 +220,14 @@ class ChatListFragment : Fragment() {
         trackedParticipantIds = emptySet()
         cachedFriends = null
     }
-
+    /**
+     * Comienza a escuchar en tiempo real el documento del usuario actual para obtener
+     * la lista de amigos (`users/{uid}.friends`). Cuando cambia:
+     * - Calcula el nuevo set de friendIds.
+     * - Llama a [updateTrackedFriends] para refrescar el seguimiento y presencia.
+     *
+     * @param uid UID del usuario actual (propietario de la lista de amigos).
+     */
     private fun startFriendsRealtime(uid: String) {
         friendsRegistration?.remove()
         friendsRegistration = Firebase.firestore
@@ -165,7 +247,14 @@ class ChatListFragment : Fragment() {
                 updateTrackedFriends(friendIds)
             }
     }
-
+    /**
+     * Actualiza el set de amigos a seguir. Si hay cambios:
+     * - Actualiza `trackedFriendIds`.
+     * - Elimina del cache aquellos amigos que ya no están.
+     * - Llama a [refreshPresenceListeners] para alinear listeners de presencia.
+     *
+     * @param friendIds Conjunto nuevo de UIDs de amigos.
+     */
     private fun updateTrackedFriends(friendIds: Set<String>) {
         if (friendIds == trackedFriendIds) return
 
@@ -174,7 +263,18 @@ class ChatListFragment : Fragment() {
         removedFriends.forEach { friendCache.remove(it) }
         refreshPresenceListeners()
     }
-
+    /**
+     * Sincroniza los listeners de presencia en Firestore con los UIDs que
+     * realmente necesitamos observar:
+     * - Objetivo = amigos + participantes en rooms (excluye al current user).
+     * - Remueve listeners sobrantes; agrega listeners faltantes.
+     * - Cada snapshot convierte el documento a [User], lo guarda en caches
+     *   y dispara [onPresenceCacheChanged] para refrescar la UI y el adaptador.
+     *
+     * Usa:
+     * - `presenceListeners`: para saber qué UIDs ya tienen listener.
+     * - `presenceCache`/`friendCache`: para exponer presencia y lista de amigos ordenada.
+     */
     private fun refreshPresenceListeners() {
         val currentUid = Firebase.auth.currentUser?.uid ?: return
         val targetIds = (trackedFriendIds + trackedParticipantIds) - currentUid
@@ -198,19 +298,27 @@ class ChatListFragment : Fragment() {
                     }
 
                     val fetched = snapshot?.toObject(User::class.java)
+
+                    val onlineFlag = (snapshot?.getBoolean("isOnline") == true) ||
+                            (snapshot?.getBoolean("online") == true)
+
+                    val lastActiveMs = snapshot?.getTimestamp("lastActive")?.toDate()?.time ?: 0L
+                    val fresh = (System.currentTimeMillis() - lastActiveMs) < 90_000  // 90s
+
+                    val computedOnline = onlineFlag && fresh
+
                     if (fetched != null) {
-                        val user = if (fetched.uid.isBlank()) fetched.copy(uid = uid) else fetched
+                        val base = if (fetched.uid.isBlank()) fetched.copy(uid = uid) else fetched
+                        val user = base.copy(isOnline = computedOnline)   // ← fuerza el valor “real”
                         presenceCache[uid] = user
-                        if (uid in trackedFriendIds) {
-                            friendCache[uid] = user
-                        } else {
-                            friendCache.remove(uid)
-                        }
+                        if (uid in trackedFriendIds) friendCache[uid] = user else friendCache.remove(uid)
                     } else {
                         presenceCache.remove(uid)
                         friendCache.remove(uid)
                     }
                     onPresenceCacheChanged()
+
+
                 }
             presenceListeners[uid] = registration
         }
@@ -223,6 +331,19 @@ class ChatListFragment : Fragment() {
         }
     }
 
+    /**
+     * Se ejecuta tras cambios en los caches de presencia/amigos.
+     * - Ordena amigos por `displayName` (fallback a uid) en minúsculas con locale actual.
+     * - Actualiza `cachedFriends` (para combinación con rooms).
+     * - Llama a `adapter.updatePresence(...)` mapeando userId -> isOnline.
+     * - Combina rooms con “friend rooms” (si rooms reales ya llegaron).
+     *
+     * Origen de datos:
+     * - `presenceCache`: contiene `User` con `isOnline`.
+     * - `friendCache`: subconjunto de `presenceCache` que están en `trackedFriendIds`.
+     * - `pendingRooms`/`viewModel.rooms.value`: rooms Firestore reales.
+     */
+
     private fun onPresenceCacheChanged() {
         val friends = friendCache.values
             .map { it }
@@ -234,7 +355,20 @@ class ChatListFragment : Fragment() {
         pendingRooms = null
         combineRoomsAndRender(currentRooms, friends)
     }
-
+    /**
+     * Combina las rooms reales con “friend rooms” sintéticas (una por amigo),
+     * de modo que el usuario pueda iniciar conversación aunque no existan mensajes todavía.
+     * Pasos:
+     * 1) Crea `friendRooms` a partir de `friends`: ChatRoom 1-a-1 (currentUid con friend.uid).
+     * 2) Une `rooms + friendRooms` y elimina duplicados:
+     *    - Si es grupo: por `room.id`.
+     *    - Si es 1-a-1: por par ordenado de participantes.
+     * 3) Actualiza `allRooms`, muestra placeholder si vacío o filtra según búsqueda.
+     * 4) Extrae nuevos participantIds (no current) y refresca listeners de presencia.
+     *
+     * @param rooms Rooms reales desde Firestore (ViewModel).
+     * @param friends Lista de amigos (para friendRooms).
+     */
     private fun combineRoomsAndRender(rooms: List<ChatRoom>, friends: List<User>) {
         val currentUid = Firebase.auth.currentUser?.uid ?: return
         val friendRooms = friends.map { user ->
@@ -275,7 +409,17 @@ class ChatListFragment : Fragment() {
         }
     }
 
-
+    /**
+     * Aplica filtro por `query` sobre `allRooms` y envía la lista resultante al adapter.
+     * Reglas:
+     * - Si vacío: muestra todo.
+     * - Si no vacío:
+     *   - Grupos: compara `groupName` (case-insensitive).
+     *   - 1-a-1: busca el nombre del otro participante en `room.userNames`.
+     * Tras submit, invoca `recycler.scheduleLayoutAnimation()` para animar cambios.
+     *
+     * @param query Cadena de búsqueda introducida por el usuario.
+     */
     private fun filterRooms(query: String) {
         if (query.isBlank()) {
             adapter.submitList(allRooms)
@@ -295,7 +439,19 @@ class ChatListFragment : Fragment() {
         }
         recycler.scheduleLayoutAnimation()
     }
-
+    /**
+     * Abre un diálogo para crear un grupo:
+     * - **UI**: infla `dialog_create_group` con Recycler (amigos con CheckBox),
+     *   campo de nombre del grupo y búsqueda de amigos.
+     * - **Data**: pide `UserRepository().getFriends(uid)` y filtra en vivo (TextWatcher).
+     * - **Validación**: exige nombre no vacío y al menos un miembro.
+     * - **Acción**: usa [ChatRoomRepository.createGroup] para persistir en Firestore.
+     * - **Feedback**: logs en éxito/fracaso y cierra el diálogo en éxito.
+     *
+     * Dependencias:
+     * - Firebase Auth para `uid` y nombre del creador.
+     * - AppLogger y ErrorLogger para registro y diagnóstico.
+     */
     private fun openCreateGroupDialog() {
         val context = requireContext()
         val uid = Firebase.auth.currentUser?.uid ?: return
@@ -418,7 +574,10 @@ class ChatListFragment : Fragment() {
             AppLogger.logError(context, e)
         })
     }
-
+    /**
+     * ViewHolder del listado de amigos en el diálogo de creación de grupo.
+     * Contiene un CheckBox para seleccionar miembros.
+     */
     private class FriendVH(view: View) : RecyclerView.ViewHolder(view) {
         val checkBox: CheckBox = view.findViewById(R.id.checkBoxFriend)
     }

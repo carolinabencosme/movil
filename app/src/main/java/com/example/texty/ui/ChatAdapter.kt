@@ -18,7 +18,7 @@ import java.util.Locale
 /**
  * Adaptador de mensajes que pinta burbujas, estados y adjuntos en el RecyclerView del chat.
 
-
+*/
 /**
  * Adaptador de chat basado en [ListAdapter] que muestra mensajes en forma de burbuja
  * y mensajes de sistema/estado. Soporta chats grupales, adjuntos mediante callback
